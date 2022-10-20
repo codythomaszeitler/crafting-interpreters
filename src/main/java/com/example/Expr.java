@@ -6,8 +6,11 @@ public abstract class Expr {
 
     interface Visitor<R> {
         R visitBinaryExpression(Expr.Binary visitor);
+
         R visitUnaryExpression(Expr.Unary visitor);
+
         R visitGroupingExpression(Expr.Grouping visitor);
+
         R visitLiteralExpression(Expr.Literal visitor);
     }
 
@@ -21,7 +24,7 @@ public abstract class Expr {
             this.left = left;
             this.operator = operator;
             this.right = right;
-        } 
+        }
 
         public <R> R accept(Visitor<R> visitor) {
             return visitor.visitBinaryExpression(this);
@@ -56,12 +59,11 @@ public abstract class Expr {
         }
     }
 
-
     public static class Literal extends Expr {
-        public final Object expression;
+        public final Object value;
 
-        public Literal(Object expression) {
-            this.expression = expression;
+        public Literal(Object value) {
+            this.value = value;
         }
 
         public <R> R accept(Visitor<R> visitor) {

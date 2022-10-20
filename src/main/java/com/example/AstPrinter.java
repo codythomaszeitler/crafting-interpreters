@@ -27,10 +27,10 @@ public class AstPrinter implements Expr.Visitor<String> {
 
     @Override
     public String visitLiteralExpression(Literal expression) {
-        if (expression.expression == null) {
+        if (expression.value == null) {
             return "nil";
         }
-        return expression.expression.toString();
+        return expression.value.toString();
     }
 
     private String parenthesize(String name, Expr... exprs) {
