@@ -1,9 +1,11 @@
 package com.example;
 
+import com.example.Expr.Assign;
 import com.example.Expr.Binary;
 import com.example.Expr.Grouping;
 import com.example.Expr.Literal;
 import com.example.Expr.Unary;
+import com.example.Expr.Variable;
 
 public class AstPrinter implements Expr.Visitor<String> {
     public String print(Expr expression) {
@@ -27,10 +29,10 @@ public class AstPrinter implements Expr.Visitor<String> {
 
     @Override
     public String visitLiteralExpression(Literal expression) {
-        if (expression.expression == null) {
+        if (expression.value == null) {
             return "nil";
         }
-        return expression.expression.toString();
+        return expression.value.toString();
     }
 
     private String parenthesize(String name, Expr... exprs) {
@@ -43,5 +45,15 @@ public class AstPrinter implements Expr.Visitor<String> {
         }
         builder.append(")");
         return builder.toString();
+    }
+
+    @Override
+    public String visitVariableExpr(Variable expr) {
+        return null;
+    }
+
+    @Override
+    public String visitVariableAssign(Assign expr) {
+        return null;
     }
 }

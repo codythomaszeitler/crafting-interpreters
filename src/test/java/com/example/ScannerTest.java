@@ -13,10 +13,13 @@ public class ScannerTest {
         Scanner scanner = new Scanner(source);
 
         List<Token> tokens = scanner.scanTokens();
-        assertEquals(1, tokens.size());
+        assertEquals(2, tokens.size());
 
         Token token = tokens.get(0);
         assertEquals(TokenType.STRING, token.type);
+
+        Token eof = tokens.get(1);
+        assertEquals(TokenType.EOF, eof.type);
     }
 
     @Test
@@ -25,7 +28,7 @@ public class ScannerTest {
         Scanner scanner = new Scanner(source);
 
         List<Token> tokens = scanner.scanTokens();
-        assertEquals(5, tokens.size());
+        assertEquals(6, tokens.size());
 
         // The tokens should be necessarily ordered.
         Token varToken = tokens.get(0);
@@ -40,7 +43,7 @@ public class ScannerTest {
         Scanner scanner = new Scanner(source);
 
         List<Token> tokens = scanner.scanTokens();
-        assertEquals(4, tokens.size());
+        assertEquals(5, tokens.size());
 
         Token oneToken = tokens.get(0);
         assertEquals(TokenType.NUMBER, oneToken.type);

@@ -17,6 +17,7 @@ public class Scanner {
     static {
         reserved = new HashMap<>();
         reserved.put("var", TokenType.VAR);
+        reserved.put("print", TokenType.PRINT);
     }
 
     private int current;
@@ -47,12 +48,14 @@ public class Scanner {
             char startingChar = this.peek();
 
             if (startingChar == '=') {
-                equalsOrDoubleEquals(); 
-            }
-            else if (startingChar == ';') {
+                equalsOrDoubleEquals();
+            } else if (startingChar == ';') {
                 semicolon();
+            } else if (startingChar == '+') {
+                add();
             } else if (isAlpha(startingChar)) {
-                // Now this is where it gets interesting. We are going to use a STATEMENT (not an expression ;) 
+                // Now this is where it gets interesting. We are going to use a STATEMENT (not
+                // an expression ;)
                 // This can either be an identifier or a keyword?
                 identifierOrKeyword();
             } else if (isQuote(startingChar)) {
@@ -67,17 +70,20 @@ public class Scanner {
             }
         }
 
+        Token eof = new Token(TokenType.EOF, "", null, this.line);
+        this.tokens.add(eof);
+
         return this.tokens;
     }
 
     private void chewUpWhitespace() {
-        while (isWhitespace(peek())){ 
+        while (isWhitespace(peek())) {
             advance();
         }
     }
 
     private void equalsOrDoubleEquals() {
-        // So this will always be an equals character. 
+        // So this will always be an equals character.
         advance();
         char maybeSecondEquals = peek();
         if (maybeSecondEquals == '=') {
@@ -128,7 +134,8 @@ public class Scanner {
         while (isAlphaNumeric(peek())) {
             advance();
         }
-        // So at this point, you have a start and a current that are in the correct spots.
+        // So at this point, you have a start and a current that are in the correct
+        // spots.
         String lexeme = this.source.substring(start, current);
         if (reserved.containsKey(lexeme)) {
             Token token = new Token(reserved.get(lexeme), lexeme, lexeme, line);
@@ -152,14 +159,20 @@ public class Scanner {
     private void digit() {
         char digit = advance();
 
-        Token token = new Token(TokenType.NUMBER, digit + "", null, this.line);
+        Token token = new Token(TokenType.NUMBER, digit + "", digit, this.line);
+        this.tokens.add(token);
+    }
+
+    private void add() {
+        char add = advance();
+        Token token = new Token(TokenType.PLUS, "+", add, this.line);
         this.tokens.add(token);
     }
 
     private Boolean isQuote(char toCheck) {
         return toCheck == '"';
     }
-    
+
     private char peek() {
         if (isAtEnd()) {
             return '\0';
