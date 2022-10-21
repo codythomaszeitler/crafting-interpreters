@@ -8,6 +8,8 @@ public abstract class Stmt {
         R visitPrintStatement(Stmt.Print statement);
 
         R visitExpressionStatement(Stmt.Expression statement);
+
+        R visitVarDeclaration(Stmt.Var statement);
     }
 
     static class Print extends Stmt {
@@ -34,5 +36,21 @@ public abstract class Stmt {
         }
 
         final Expr expression;
+    }
+
+    public static class Var extends Stmt {
+
+        public final Token name;
+        public final Expr rightHandSide;
+
+        public Var(Token name, Expr rightHandSide) {
+            this.name = name;
+            this.rightHandSide = rightHandSide;
+        }
+
+        @Override
+        <R> R accept(Visitor<R> visitor) {
+            return visitor.visitVarDeclaration(this);
+        }
     }
 }

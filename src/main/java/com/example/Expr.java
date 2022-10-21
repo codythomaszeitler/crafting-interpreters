@@ -12,6 +12,10 @@ public abstract class Expr {
         R visitGroupingExpression(Expr.Grouping visitor);
 
         R visitLiteralExpression(Expr.Literal visitor);
+
+        R visitVariableExpr(Expr.Variable expr);
+
+        R visitVariableAssign(Expr.Assign expr);
     }
 
     public static class Binary extends Expr {
@@ -69,5 +73,34 @@ public abstract class Expr {
         public <R> R accept(Visitor<R> visitor) {
             return visitor.visitLiteralExpression(this);
         }
+    }
+
+    public static class Assign extends Expr {
+
+        public final Token name;
+        public final Expr rightHandSide;
+
+        public Assign(Token name, Expr rightHandSide) {
+            this.name = name;
+            this.rightHandSide = rightHandSide;
+        }
+
+        @Override
+        public <R> R accept(Visitor<R> visitor) {
+            return visitor.visitVariableAssign(this);
+        }
+    }
+
+    static class Variable extends Expr {
+        Variable(Token name) {
+            this.name = name;
+        }
+
+        @Override
+        public <R> R accept(Visitor<R> visitor) {
+            return visitor.visitVariableExpr(this);
+        }
+
+        final Token name;
     }
 }

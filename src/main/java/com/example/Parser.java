@@ -17,7 +17,7 @@ public class Parser {
         List<Stmt> statements = new ArrayList<>();
 
         while (!isAtEnd()) {
-            statements.add(statement());
+            statements.add(declaration());
         }
 
         return statements;
@@ -25,6 +25,29 @@ public class Parser {
 
     private Boolean isAtEnd() {
         return this.tokens.get(current).type == TokenType.EOF;
+    }
+
+    private Stmt declaration() {
+        Token maybeVar = peek();
+
+        if (maybeVar.type == TokenType.VAR) {
+            return varDeclaration();
+        } else {
+            return statement();
+        }
+    }
+
+    private Stmt varDeclaration() {
+        Token var = advance();
+        Token name = advance();
+
+        Expr initializer = null;
+        if (match(TokenType.EQUAL)) {
+            advance();
+            initializer = expression();
+        }
+        advance();
+        return new Stmt.Var(name, initializer);
     }
 
     private Stmt statement() {
@@ -43,7 +66,29 @@ public class Parser {
     }
 
     private Expr expression() {
-        return equality();
+        return assignment();
+    }
+
+    private Expr assignment() {
+
+        // So this is a left hand thing of the = thingermorebob
+        // WAit wait wait... hold the phone. WTF is this doing exactly?
+        Expr expression = equality();
+
+        Token maybeEquals = peek();
+        if (maybeEquals.type == TokenType.EQUAL) {
+            Token equals = advance();
+            Expr value = assignment();
+
+            if (expression instanceof Expr.Variable) {
+                Expr.Variable variable = (Expr.Variable) expression;
+                Token name = variable.name;
+
+                return new Expr.Assign(name, value);
+            }
+            return null;
+        }
+        return expression;
     }
 
     private Expr equality() {
@@ -74,8 +119,13 @@ public class Parser {
     }
 
     private Expr primary() {
-        Token number = advance();
-        return new Expr.Literal(Double.parseDouble(number.lexeme));
+        Token first = advance();
+
+        if (first.type == TokenType.NUMBER) {
+            return new Expr.Literal(Double.parseDouble(first.lexeme));
+        } else {
+            return new Expr.Variable(first);
+        }
     }
 
     private Token peek() {
