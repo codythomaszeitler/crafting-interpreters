@@ -28,13 +28,26 @@ public class Parser {
     }
 
     private Stmt declaration() {
-        Token maybeVar = peek();
-
-        if (maybeVar.type == TokenType.VAR) {
+        Token maybeVarOrBlockStart = peek();
+        if (maybeVarOrBlockStart.type == TokenType.LEFT_BRACE) {
+            return blockStatement();
+        } else if (maybeVarOrBlockStart.type == TokenType.VAR) {
             return varDeclaration();
         } else {
             return statement();
         }
+    }
+
+    private Stmt blockStatement() {
+        Token leftBrace = advance();
+
+        List<Stmt> statements = new ArrayList<Stmt>();
+        while (peek().type != TokenType.RIGHT_BRACE) {
+            statements.add(declaration());
+        }
+
+        Token rightBrace = advance();
+        return new Stmt.Block(statements);
     }
 
     private Stmt varDeclaration() {

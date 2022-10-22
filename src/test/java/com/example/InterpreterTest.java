@@ -1,6 +1,5 @@
 package com.example;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -29,6 +28,45 @@ public class InterpreterTest {
         assertTrue(reporter.hasMessage("5.0"));
         assertTrue(reporter.hasMessage("6.0"));
     }
+
+    @Test
+    public void testBlockScoping() {
+        String source = "var cody = 5; { var cody = 6; print cody; } print cody;";
+        Scanner scanner = new Scanner(source);
+
+        List<Token> tokens = scanner.scanTokens();
+        Parser parser = new Parser(tokens);
+
+        CatchSysOutReporter reporter = new CatchSysOutReporter();
+
+        List<Stmt> statements = parser.parse();
+        Interpreter testObject = new Interpreter(reporter);
+        testObject.interpret(statements);
+
+        assertTrue(reporter.hasMessage("6.0"));
+        assertTrue(reporter.hasMessage("5.0"));
+    }
+
+    @Test
+    public void testDoubleBlockingScope() {
+        String source = "var cody = 5; { { var cody = 8; print cody; }  var cody = 6; print cody; { var cody = 123; print cody;} } print cody;";
+        Scanner scanner = new Scanner(source);
+
+        List<Token> tokens = scanner.scanTokens();
+        Parser parser = new Parser(tokens);
+
+        CatchSysOutReporter reporter = new CatchSysOutReporter();
+
+        List<Stmt> statements = parser.parse();
+        Interpreter testObject = new Interpreter(reporter);
+        testObject.interpret(statements);
+
+        assertTrue(reporter.hasMessage("6.0"));
+        assertTrue(reporter.hasMessage("8.0"));
+        assertTrue(reporter.hasMessage("123.0"));
+        assertTrue(reporter.hasMessage("5.0"));
+    }
+
     private static class CatchSysOutReporter implements Interpreter.Reporter {
 
         private List<ReportParams> params;

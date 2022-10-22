@@ -53,6 +53,10 @@ public class Scanner {
                 semicolon();
             } else if (startingChar == '+') {
                 add();
+            } else if (startingChar == '{') {
+                blockStart();
+            } else if (startingChar == '}') {
+                blockEnd();
             } else if (isAlpha(startingChar)) {
                 // Now this is where it gets interesting. We are going to use a STATEMENT (not
                 // an expression ;)
@@ -157,15 +161,30 @@ public class Scanner {
     }
 
     private void digit() {
-        char digit = advance();
-
-        Token token = new Token(TokenType.NUMBER, digit + "", digit, this.line);
+        // So wait... this thing can be super long... how do we know that we are out of stuff? 
+        String digitAsString = advance() + "";
+        while (isDigit(peek())) {
+            digitAsString += advance();
+        }
+        Token token = new Token(TokenType.NUMBER, digitAsString, digitAsString, this.line);
         this.tokens.add(token);
     }
 
     private void add() {
         char add = advance();
         Token token = new Token(TokenType.PLUS, "+", add, this.line);
+        this.tokens.add(token);
+    }
+
+    private void blockStart() {
+        char blockStart = advance();
+        Token token = new Token(TokenType.LEFT_BRACE, "{", blockStart, this.line);
+        this.tokens.add(token);
+    }
+
+    private void blockEnd() {
+        char blockEnd = advance();
+        Token token = new Token(TokenType.RIGHT_BRACE, "}", blockEnd, this.line);
         this.tokens.add(token);
     }
 
