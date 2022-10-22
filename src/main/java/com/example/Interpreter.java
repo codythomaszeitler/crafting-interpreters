@@ -10,6 +10,7 @@ import com.example.Expr.Unary;
 import com.example.Expr.Variable;
 import com.example.Stmt.Block;
 import com.example.Stmt.Expression;
+import com.example.Stmt.If;
 import com.example.Stmt.Print;
 import com.example.Stmt.Var;
 
@@ -28,8 +29,8 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Void visitPrintStatement(Print statement) {
-        Double value = (Double) evaluate(statement.expression);
-        reporter.report(new ReportParams(Double.toString(value)));
+        Object value = evaluate(statement.expression);
+        reporter.report(new ReportParams(value.toString()));
         return null;
     }
 
@@ -120,6 +121,20 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
             execute(statement);
         }
         this.environment = previous;
+        return null;
+    }
+
+    @Override
+    public Void visitIfStatement(If statement) {
+        // We do not need to worry about the environment in this case....
+        // the block statement should really do that for us.
+
+        Boolean shouldRunBlock = (Boolean) evaluate(statement.expression);
+
+        if (shouldRunBlock) {
+            execute(statement.block);
+        }
+        
         return null;
     }
 }

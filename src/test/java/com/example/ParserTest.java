@@ -15,6 +15,21 @@ public class ParserTest {
         Parser testObject = new Parser(tokens);
 
         List<Stmt> statements = testObject.parse();
-        assertEquals(1, statements.size());
+        assertEquals(3, statements.size());
+    }
+
+    // It's passing because there is a null in there making the list size 2.
+    // That really, really should not work lmfao.
+    @Test
+    public void itShouldBeAbleToParserAnIfStatement() {
+        String source = "var cody = false; if (cody) {print \"test\"; }";
+        Scanner scanner = new Scanner(source);
+        List<Token> tokens = scanner.scanTokens();
+
+        Parser testObject = new Parser(tokens);
+
+        List<Stmt> statements = testObject.parse();
+        // So there should be two statements in here?
+        assertEquals(2, statements.size());
     }
 }
