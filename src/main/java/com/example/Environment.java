@@ -11,6 +11,10 @@ public class Environment {
         this.enclosing = null;
     }
 
+    public Environment(Environment enclosing) {
+        this.enclosing = enclosing;
+    }
+
     void define(String name, Object value) {
         this.values.put(name, value);
     }
@@ -23,6 +27,13 @@ public class Environment {
     }
 
     Object get(String name) {
-        return this.values.get(name);
+        if (this.values.containsKey(name)) {
+            return this.values.get(name);
+        }
+
+        if (this.enclosing != null) {
+            return this.enclosing.get(name);
+        }
+        return null;
     }
 }

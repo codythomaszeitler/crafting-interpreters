@@ -8,6 +8,7 @@ import com.example.Expr.Grouping;
 import com.example.Expr.Literal;
 import com.example.Expr.Unary;
 import com.example.Expr.Variable;
+import com.example.Stmt.Block;
 import com.example.Stmt.Expression;
 import com.example.Stmt.Print;
 import com.example.Stmt.Var;
@@ -109,5 +110,16 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
         public void report(ReportParams params) {
             System.out.println(params.message);
         }
+    }
+
+    @Override
+    public Void visitBlockStatement(Block block) {
+        Environment previous = this.environment;
+        this.environment = new Environment(this.environment);
+        for (Stmt statement : block.statements) {
+            execute(statement);
+        }
+        this.environment = previous;
+        return null;
     }
 }
