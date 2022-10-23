@@ -117,8 +117,32 @@ public class Parser {
         return maybeAssignmentToName;
     }
 
+    // This might be an algorithm that we constantly have to keep coming back to.
     private Expr equality() {
-        return comparison();
+        // Okay here is the equality thing...
+
+        // How does it handle multiple left associativity and WHY 
+        // does it work before I blindly just TDD a solution.
+
+        // The parser is probably ready to consume a 5.
+        // The parser is actually more ready to consumer a comparison... 
+        // which may end up being a primary.
+        // (Remember the mother flipping tree my fam) 
+        Expr leftHandSide = comparison();
+
+        // So at this point we never should have parsed a == 
+        // So we should probably be able to do that right now...
+        // I wonder if the scanner can actually handle this at this point.
+
+        Token maybeDoubleEquals = peek();
+        if (TokenType.EQUAL_EQUAL == maybeDoubleEquals.type) {
+            Token doubleEquals = advance();
+            Expr rightHandSide = comparison();
+
+            return new Expr.Binary(leftHandSide, doubleEquals, rightHandSide);
+        } else {
+            return leftHandSide;
+        }
     }
 
     private Expr comparison() {
@@ -131,6 +155,7 @@ public class Parser {
             Token operator = advance();
             Expr right = factor();
 
+            // We do already have the operator here... 
             return new Expr.Binary(left, operator, right);
         }
         return left;
@@ -141,14 +166,6 @@ public class Parser {
     }
 
     private Expr unary() {
-        // This gets super interesting because how the fuck do you compose 
-        // the expressions together?
-
-        // It should be something like the unary WRAPS around the other
-        // expression and just negates it.
-
-        // Somehow our visitor pattern is going to have to handle that... 
-
         Token maybeUnaryOperator = peek();
         if (maybeUnaryOperator.type == TokenType.BANG) {
             Token unaryOperator = advance();

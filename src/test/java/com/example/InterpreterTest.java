@@ -95,11 +95,21 @@ public class InterpreterTest {
         assertFalse(reporter.hasMessage("test"));
     }
 
+    // wtf how would 5 == 5 == 5 even work?
+    // It sounds like one of those associativity things that I would 
+    // need to work through.
     @Test
     public void itShouldBeAbleToRunEquals() {
         String source = "if (5 == 5) {print \"test\"; }";
         CatchSysOutReporter reporter = runInterpreterAgainst(source);
         assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToRunEqualsWhenFalse() {
+        String source = "if (5 == 6) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertFalse(reporter.hasMessage("test"));
     }
 
     private static class CatchSysOutReporter implements Interpreter.Reporter {
