@@ -69,6 +69,11 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Object visitUnaryExpression(Unary visitor) {
+        if (TokenType.BANG == visitor.operation.type) {
+            Boolean resolved = (Boolean) evaluate(visitor.expression);
+            Boolean banged = !resolved;
+            return banged;
+        }
         return null;
     }
 

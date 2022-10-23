@@ -64,7 +64,14 @@ public class Scanner {
                 leftParen();
             } else if (startingChar == ')') {
                 rightParen();
-            } else if (isAlpha(startingChar)) {
+            } 
+            else if (startingChar == '!') {
+                // Well this actually gets kind of complicated since
+                // it could be a ! or != and those are different tokens
+                // during lexical analysis.
+                bang();
+            }
+            else if (isAlpha(startingChar)) {
                 // Now this is where it gets interesting. We are going to use a STATEMENT (not
                 // an expression ;)
                 // This can either be an identifier or a keyword?
@@ -205,6 +212,12 @@ public class Scanner {
     private void rightParen() {
         char rightParen = advance();
         Token token = new Token(TokenType.RIGHT_PAREN, ")", rightParen, this.line);
+        this.tokens.add(token);
+    }
+
+    private void bang() {
+        char bang = advance();
+        Token token = new Token(TokenType.BANG, "!", bang, this.line);
         this.tokens.add(token);
     }
 

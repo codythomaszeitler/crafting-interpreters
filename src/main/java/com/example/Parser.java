@@ -91,6 +91,9 @@ public class Parser {
         }
     }
 
+    // You need to call yourself or something with higher precedence? 
+    // The reason that works is because stuff at the lowest part of the precedence
+    // tree becomes the root? or something of that sort. 
     private Expr expression() {
         return assignment();
     }
@@ -138,13 +141,30 @@ public class Parser {
     }
 
     private Expr unary() {
-        return primary();
+        // This gets super interesting because how the fuck do you compose 
+        // the expressions together?
+
+        // It should be something like the unary WRAPS around the other
+        // expression and just negates it.
+
+        // Somehow our visitor pattern is going to have to handle that... 
+
+        Token maybeUnaryOperator = peek();
+        if (maybeUnaryOperator.type == TokenType.BANG) {
+            Token unaryOperator = advance();
+            Expr toBang = expression();
+            return new Expr.Unary(unaryOperator, toBang);
+        } else {
+            return primary();
+        }
     }
 
     private Expr primary() {
         Token first = advance();
 
-        if (first.type == TokenType.TRUE) {
+        if (first.type == TokenType.STRING) {
+            return new Expr.Literal(first.lexeme);
+        } else if (first.type == TokenType.TRUE || first.type == TokenType.FALSE) {
             return new Expr.Literal(Boolean.parseBoolean(first.lexeme));
         } else if (first.type == TokenType.NUMBER) {
             return new Expr.Literal(Double.parseDouble(first.lexeme));

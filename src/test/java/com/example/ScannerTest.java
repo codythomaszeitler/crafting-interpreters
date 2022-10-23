@@ -97,4 +97,16 @@ public class ScannerTest {
         Token expressionToken = tokens.get(7);
         assertEquals(TokenType.IDENTIFIER, expressionToken.type);
     }
+
+    @Test
+    public void itShouldBeAbleToParseAUnaryOperator() {
+        String source = "var cody = !false;";
+        Scanner testObject = new Scanner(source);
+
+        List<Token> tokens = testObject.scanTokens();
+        assertEquals(7, tokens.size());
+
+        Token unaryOperator = tokens.get(3);
+        assertEquals(TokenType.BANG, unaryOperator.type);
+    }
 }

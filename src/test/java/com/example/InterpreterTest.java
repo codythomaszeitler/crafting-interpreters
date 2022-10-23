@@ -1,5 +1,6 @@
 package com.example;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -65,8 +66,38 @@ public class InterpreterTest {
     }
 
     @Test
-    public void testIfConditionalWorks() {
+    public void testIfConditionalWorksInTrueCase() {
         String source = "var cody = true; if (cody) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void testIfConditionalWorksInFalseCase() {
+        String source = "var cody = false; if (cody) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertFalse(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToUseConditionalWithRawTrue() {
+        String source = "if (true) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToNotEnterOnUnaryTrueOperation() {
+        // Man this is going to be so cool if I can get this to work.
+        // This should be legit lox right here? 
+        String source = "if (!true) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertFalse(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToRunEquals() {
+        String source = "if (5 == 5) {print \"test\"; }";
         CatchSysOutReporter reporter = runInterpreterAgainst(source);
         assertTrue(reporter.hasMessage("test"));
     }
