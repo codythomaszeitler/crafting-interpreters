@@ -65,6 +65,9 @@ public class Scanner {
             } else if (startingChar == ')') {
                 rightParen();
             } 
+            else if (startingChar == '>') {
+                greaterThan();
+            }
             else if (startingChar == '!') {
                 // Well this actually gets kind of complicated since
                 // it could be a ! or != and those are different tokens
@@ -212,6 +215,12 @@ public class Scanner {
     private void rightParen() {
         char rightParen = advance();
         Token token = new Token(TokenType.RIGHT_PAREN, ")", rightParen, this.line);
+        this.tokens.add(token);
+    }
+
+    private void greaterThan() {
+        char greaterThan = advance();
+        Token token = new Token(TokenType.GREATER, ">", greaterThan, this.line);
         this.tokens.add(token);
     }
 

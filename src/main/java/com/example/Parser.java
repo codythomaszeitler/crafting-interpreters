@@ -91,9 +91,6 @@ public class Parser {
         }
     }
 
-    // You need to call yourself or something with higher precedence? 
-    // The reason that works is because stuff at the lowest part of the precedence
-    // tree becomes the root? or something of that sort. 
     private Expr expression() {
         return assignment();
     }
@@ -117,36 +114,23 @@ public class Parser {
         return maybeAssignmentToName;
     }
 
-    // This might be an algorithm that we constantly have to keep coming back to.
     private Expr equality() {
-        // Okay here is the equality thing...
-
-        // How does it handle multiple left associativity and WHY 
-        // does it work before I blindly just TDD a solution.
-
-        // The parser is probably ready to consume a 5.
-        // The parser is actually more ready to consumer a comparison... 
-        // which may end up being a primary.
-        // (Remember the mother flipping tree my fam) 
         Expr leftHandSide = comparison();
-
-        // So at this point we never should have parsed a == 
-        // So we should probably be able to do that right now...
-        // I wonder if the scanner can actually handle this at this point.
-
-        Token maybeDoubleEquals = peek();
-        if (TokenType.EQUAL_EQUAL == maybeDoubleEquals.type) {
-            Token doubleEquals = advance();
-            Expr rightHandSide = comparison();
-
-            return new Expr.Binary(leftHandSide, doubleEquals, rightHandSide);
-        } else {
-            return leftHandSide;
+        while (match(TokenType.EQUAL_EQUAL)) {
+            Token equalsEquals = advance();
+            leftHandSide = new Expr.Binary(leftHandSide, equalsEquals, comparison());
         }
+        return leftHandSide;
     }
 
     private Expr comparison() {
-        return term();
+        Expr leftHandSide = term();
+        while (match(TokenType.GREATER)) {
+            Token comparisonOperator = advance();
+            leftHandSide = new Expr.Binary(leftHandSide, comparisonOperator, term());
+        }
+
+        return leftHandSide;
     }
 
     private Expr term() {

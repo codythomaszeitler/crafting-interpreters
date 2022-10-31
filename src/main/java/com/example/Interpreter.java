@@ -73,6 +73,10 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
             Object left = evaluate(visitor.left);
             Object right = evaluate(visitor.right);
             return left.equals(right);
+        } else if (TokenType.GREATER == visitor.operator.type) {
+            Double left = (Double) evaluate(visitor.left);
+            Double right = (Double) evaluate(visitor.right);
+            return left > right;
         } else {
             return null;
         }

@@ -6,7 +6,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Before;
 import org.junit.Test;
 
 import com.example.Interpreter.ReportParams;
@@ -30,7 +29,8 @@ public class InterpreterTest {
 
     @Test
     public void test1() {
-        CatchSysOutReporter reporter = runInterpreterAgainst("print 3 + 5; var cody = 5; print cody; cody = 6; print cody;");
+        CatchSysOutReporter reporter = runInterpreterAgainst(
+                "print 3 + 5; var cody = 5; print cody; cody = 6; print cody;");
 
         assertTrue(reporter.hasMessage("8.0"));
         assertTrue(reporter.hasMessage("5.0"));
@@ -88,16 +88,11 @@ public class InterpreterTest {
 
     @Test
     public void itShouldBeAbleToNotEnterOnUnaryTrueOperation() {
-        // Man this is going to be so cool if I can get this to work.
-        // This should be legit lox right here? 
         String source = "if (!true) {print \"test\"; }";
         CatchSysOutReporter reporter = runInterpreterAgainst(source);
         assertFalse(reporter.hasMessage("test"));
     }
 
-    // wtf how would 5 == 5 == 5 even work?
-    // It sounds like one of those associativity things that I would 
-    // need to work through.
     @Test
     public void itShouldBeAbleToRunEquals() {
         String source = "if (5 == 5) {print \"test\"; }";
@@ -110,6 +105,34 @@ public class InterpreterTest {
         String source = "if (5 == 6) {print \"test\"; }";
         CatchSysOutReporter reporter = runInterpreterAgainst(source);
         assertFalse(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToRunEqualsWithVars() {
+        String source = "var cody = 5; var kirk = 5; if (cody == kirk) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToRunEqualsWithInlineAddition() {
+        String source = "var cody = 5; var kirk = 4; if (cody == kirk + 1) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToDoMultiLevelEquals() {
+        String source = "if (5 == 5 == 5 == 5 == 5 == 6) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertFalse(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToDoGreaterThan() {
+        String source = "if ( 6 > 5 ) { print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
     }
 
     private static class CatchSysOutReporter implements Interpreter.Reporter {
