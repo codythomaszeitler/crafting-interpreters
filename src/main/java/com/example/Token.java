@@ -1,4 +1,3 @@
-//> Scanning token-class
 package com.example;
 
 class Token {

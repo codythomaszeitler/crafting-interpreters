@@ -62,9 +62,6 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Object visitBinaryExpression(Binary visitor) {
-        // So if we make it a binary expression (which is maybe should be?)
-        // then this would have to account for the 
-
         if (TokenType.PLUS == visitor.operator.type) {
             Double left = (Double) evaluate(visitor.left);
             Double right = (Double) evaluate(visitor.right);
@@ -77,6 +74,11 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
             Double left = (Double) evaluate(visitor.left);
             Double right = (Double) evaluate(visitor.right);
             return left > right;
+        } 
+        else if (TokenType.AND == visitor.operator.type)  {
+            Boolean left = (Boolean) evaluate(visitor.left);
+            Boolean right = (Boolean) evaluate(visitor.right);
+            return left && right;
         } else {
             return null;
         }

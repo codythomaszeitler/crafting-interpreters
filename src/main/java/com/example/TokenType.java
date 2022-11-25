@@ -1,6 +1,7 @@
 //> Scanning token-type
 package com.example;
 
+// Someone must have this mapping?
 enum TokenType {
   // Single-character tokens.
   LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,

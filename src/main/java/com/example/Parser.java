@@ -8,19 +8,37 @@ public class Parser {
     private int current;
 
     private final List<Token> tokens;
+    private final Parser.Reporter reporter;
 
     public Parser(List<Token> tokens) {
+        this(tokens, new Parser.SysOutReporter());
+    }
+
+    public Parser(List<Token> tokens, Parser.Reporter reporter) {
         this.tokens = tokens;
+        this.reporter = reporter;
     }
 
     public List<Stmt> parse() {
         List<Stmt> statements = new ArrayList<>();
 
         while (!isAtEnd()) {
-            statements.add(declaration());
+            try {
+                statements.add(declaration());
+            } catch (Parser.ParseError e) {
+                ErrorParams params = new ErrorParams(e);
+                this.reporter.reportError(params);
+                synchronize();
+            }
         }
 
         return statements;
+    }
+
+    private void synchronize() {
+        while (peek().type != TokenType.EOF) {
+            advance();
+        }
     }
 
     private Boolean isAtEnd() {
@@ -41,10 +59,10 @@ public class Parser {
     }
 
     private Stmt ifStatement() {
-        Token ifToken = advance();
-        Token leftParen = advance();
+        consume(TokenType.IF);
+        consume(TokenType.LEFT_PAREN);
         Expr expression = expression();
-        Token rightParent = advance();
+        consume(TokenType.RIGHT_PAREN);
         Stmt.Block blockStatement = blockStatement();
 
         Stmt.If ifStatement = new Stmt.If(expression, blockStatement);
@@ -52,19 +70,19 @@ public class Parser {
     }
 
     private Stmt.Block blockStatement() {
-        Token leftBrace = advance();
+        consume(TokenType.LEFT_BRACE);
 
         List<Stmt> statements = new ArrayList<Stmt>();
         while (peek().type != TokenType.RIGHT_BRACE) {
             statements.add(declaration());
         }
 
-        Token rightBrace = advance();
+        consume(TokenType.RIGHT_BRACE);
         return new Stmt.Block(statements);
     }
 
     private Stmt varDeclaration() {
-        Token var = advance();
+        consume(TokenType.VAR);
         Token name = advance();
 
         Expr initializer = null;
@@ -100,7 +118,7 @@ public class Parser {
 
         Token maybeEquals = peek();
         if (maybeEquals.type == TokenType.EQUAL) {
-            Token equals = advance();
+            consume(TokenType.EQUAL);
             Expr rightHandSide = assignment();
 
             if (maybeAssignmentToName instanceof Expr.Variable) {
@@ -115,10 +133,19 @@ public class Parser {
     }
 
     private Expr equality() {
-        Expr leftHandSide = comparison();
+        Expr leftHandSide = logicalAnd();
         while (match(TokenType.EQUAL_EQUAL)) {
             Token equalsEquals = advance();
-            leftHandSide = new Expr.Binary(leftHandSide, equalsEquals, comparison());
+            leftHandSide = new Expr.Binary(leftHandSide, equalsEquals, logicalAnd());
+        }
+        return leftHandSide;
+    }
+
+    private Expr logicalAnd() {
+        Expr leftHandSide = comparison();
+        while (match(TokenType.AND)) {
+            Token logicalAndOperator = advance();
+            leftHandSide = new Expr.Binary(leftHandSide, logicalAndOperator, comparison());
         }
         return leftHandSide;
     }
@@ -139,7 +166,7 @@ public class Parser {
             Token operator = advance();
             Expr right = factor();
 
-            // We do already have the operator here... 
+            // We do already have the operator here...
             return new Expr.Binary(left, operator, right);
         }
         return left;
@@ -150,7 +177,7 @@ public class Parser {
     }
 
     private Expr unary() {
-        Token maybeUnaryOperator = peek();
+        final Token maybeUnaryOperator = peek();
         if (maybeUnaryOperator.type == TokenType.BANG) {
             Token unaryOperator = advance();
             Expr toBang = expression();
@@ -190,5 +217,54 @@ public class Parser {
             }
         }
         return false;
+    }
+
+    private void consume(TokenType tokenType) {
+        Token found = advance();
+        if (found.type != tokenType) {
+            throw new ParseError(found, tokenType);
+        }
+    }
+
+    private static class ParseError extends RuntimeException {
+
+        private final Token found;
+        private final TokenType expected;
+
+        private ParseError(Token found, TokenType expected) {
+            super(getErrorMessage(found, expected));
+
+            this.found = found;
+            this.expected = expected;
+        }
+
+        private static String getErrorMessage(Token found, TokenType expected) {
+            String errorMessage = "Lox compile error: expected " + expected + " at line " + found.line + ", found "
+                    + "\"" + found.lexeme + "\".";
+            return errorMessage;
+        }
+    }
+
+    public static interface Reporter {
+        public void reportError(ErrorParams params);
+    }
+
+    public static class ErrorParams {
+        private final ParseError error;
+
+        public ErrorParams(ParseError e) {
+            this.error = e;
+        }
+
+        public String getErrorMessage() {
+            return this.error.getMessage();
+        }
+    }
+
+    public static class SysOutReporter implements Reporter {
+        @Override
+        public void reportError(ErrorParams params) {
+            System.out.println(params.getErrorMessage());
+        }
     }
 }

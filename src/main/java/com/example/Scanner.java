@@ -35,6 +35,7 @@ public class Scanner {
     public Scanner(String source) {
         this.start = 0;
         this.current = 0;
+        this.line = 1;
         this.source = source;
         this.tokens = new ArrayList<>();
         this.hasError = false;
@@ -67,6 +68,7 @@ public class Scanner {
             } else if (startingChar == '>') {
                 greaterThan();
             } else if (startingChar == '&') {
+                // Oh... this is the wrong and?
                 and();
             } else if (startingChar == '!') {
                 // Well this actually gets kind of complicated since
@@ -177,8 +179,6 @@ public class Scanner {
     }
 
     private void digit() {
-        // So wait... this thing can be super long... how do we know that we are out of
-        // stuff?
         String digitAsString = advance() + "";
         while (isDigit(peek())) {
             digitAsString += advance();
