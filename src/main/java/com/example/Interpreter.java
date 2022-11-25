@@ -29,6 +29,20 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
         this.reporter = reporter;
     }
 
+    void interpret(List<Stmt> statements) {
+        for (Stmt statement : statements) {
+            execute(statement);
+        }
+    }
+
+    private void execute(Stmt statement) {
+        statement.accept(this);
+    }
+
+    private Object evaluate(Expr expression) {
+        return expression.accept(this);
+    }
+
     @Override
     public Void visitPrintStatement(Print statement) {
         Object value = evaluate(statement.expression);
@@ -46,20 +60,6 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     public Void visitVarDeclaration(Var statement) {
         this.environment.define(statement.name.lexeme, evaluate(statement.rightHandSide));
         return null;
-    }
-
-    void interpret(List<Stmt> statements) {
-        for (Stmt statement : statements) {
-            execute(statement);
-        }
-    }
-
-    private void execute(Stmt statement) {
-        statement.accept(this);
-    }
-
-    private Object evaluate(Expr expression) {
-        return expression.accept(this);
     }
 
     @Override
@@ -80,6 +80,15 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
             Boolean left = (Boolean) evaluate(visitor.left);
             Boolean right = (Boolean) evaluate(visitor.right);
             return left && right;
+        } else if (TokenType.LESS_EQUAL == visitor.operator.type) {
+            Double left = (Double) evaluate(visitor.left);
+            Double right = (Double) evaluate(visitor.right);
+            return left <= right;
+        } 
+        else if (TokenType.MINUS == visitor.operator.type) {
+            Double left = (Double) evaluate(visitor.left);
+            Double right = (Double) evaluate(visitor.right);
+            return left - right;
         } else {
             return null;
         }
@@ -115,25 +124,6 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
         Object value = evaluate(expr.rightHandSide);
         environment.assign(expr.name, value);
         return null;
-    }
-
-    public static interface Reporter {
-        public void report(ReportParams params);
-    }
-
-    public static class ReportParams {
-        public final String message;
-
-        public ReportParams(String message) {
-            this.message = message;
-        }
-    }
-
-    public static class SysOutReporter implements Reporter {
-        @Override
-        public void report(ReportParams params) {
-            System.out.println(params.message);
-        }
     }
 
     @Override
@@ -175,8 +165,46 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
             this.environment.define(name, evaluate(value));
         }
 
-        execute(functionDeclaration.block);
-        this.environment = previous;
+        try {
+            execute(functionDeclaration.block);
+        } catch (Interpreter.Return e) {
+            return e.value;
+        } finally {
+            this.environment = previous;
+        }
         return null;
+    }
+
+    @Override
+    public Void visitReturnStatement(Stmt.Return statement) {
+        Object value = evaluate(statement.expression);
+        throw new Interpreter.Return(value);
+    }
+
+    public static interface Reporter {
+        public void report(ReportParams params);
+    }
+
+    public static class ReportParams {
+        public final String message;
+
+        public ReportParams(String message) {
+            this.message = message;
+        }
+    }
+
+    public static class SysOutReporter implements Reporter {
+        @Override
+        public void report(ReportParams params) {
+            System.out.println(params.message);
+        }
+    }
+
+    private static class Return extends RuntimeException {
+        public final Object value;
+
+        public Return(Object value) {
+            this.value = value;
+        }
     }
 }

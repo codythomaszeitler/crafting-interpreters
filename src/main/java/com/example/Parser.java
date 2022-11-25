@@ -55,6 +55,8 @@ public class Parser {
             return varDeclaration();
         } else if (maybeVarOrBlockStmtOrIfStmt.type == TokenType.FUN) {
             return functionDeclaration();   
+        } else if (maybeVarOrBlockStmtOrIfStmt.type == TokenType.RETURN) {
+            return returnStatement();
         } else {
             return statement();
         }
@@ -94,6 +96,14 @@ public class Parser {
         }
         advance();
         return new Stmt.Var(name, initializer);
+    }
+
+    private Stmt returnStatement() {
+        consume(TokenType.RETURN);
+        Expr expression = expression();
+        Stmt.Return stmt = new Stmt.Return(expression);
+        consume(TokenType.SEMICOLON);
+        return stmt;
     }
 
     private Stmt functionDeclaration() {
@@ -181,7 +191,7 @@ public class Parser {
 
     private Expr comparison() {
         Expr leftHandSide = term();
-        while (match(TokenType.GREATER)) {
+        while (match(TokenType.GREATER, TokenType.LESS_EQUAL)) {
             Token comparisonOperator = advance();
             leftHandSide = new Expr.Binary(leftHandSide, comparisonOperator, term());
         }

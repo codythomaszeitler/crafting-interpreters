@@ -22,6 +22,7 @@ public class Scanner {
         reserved.put("false", TokenType.FALSE);
         reserved.put("if", TokenType.IF);
         reserved.put("func", TokenType.FUN);
+        reserved.put("return", TokenType.RETURN);
     }
 
     private int current;
@@ -69,6 +70,12 @@ public class Scanner {
             } else if (startingChar == '>') {
                 greaterThan();
             } 
+            else if (startingChar == '<') {
+                lessThanOrLessThanOrEqualTo();
+            }
+            else if (startingChar == '-') {
+                subtraction();
+            }
             else if (startingChar == ',') {
                 comma();
             } 
@@ -225,6 +232,26 @@ public class Scanner {
     private void greaterThan() {
         char greaterThan = advance();
         Token token = new Token(TokenType.GREATER, ">", greaterThan, this.line);
+        this.tokens.add(token);
+    }
+
+    private void lessThanOrLessThanOrEqualTo() {
+        advance();
+        char maybeEquals = peek();
+
+        if (maybeEquals == '=') {
+            advance();
+            Token token = new Token(TokenType.LESS_EQUAL, "<=", "<=", this.line);
+            this.tokens.add(token);
+        } else {
+            Token token = new Token(TokenType.GREATER, "<", "<", this.line);
+            this.tokens.add(token);
+        }
+    }
+
+    private void subtraction() {
+        char subtraction = advance();
+        Token token = new Token(TokenType.MINUS, "-", subtraction, this.line);
         this.tokens.add(token);
     }
 

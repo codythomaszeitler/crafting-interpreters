@@ -19,6 +19,8 @@ public abstract class Stmt {
         R visitIfStatement(Stmt.If statement);
 
         R visitFunctionDeclStatement(Stmt.FuncDecl statement);
+
+        R visitReturnStatement(Stmt.Return statement);
     }
 
     static class Print extends Stmt {
@@ -108,6 +110,19 @@ public abstract class Stmt {
         @Override
         public <R> R accept(Visitor<R> visitor) {
             return visitor.visitFunctionDeclStatement(this);
+        }
+    }
+
+    public static class Return extends Stmt {
+        public final Expr expression;
+
+        public Return(Expr expression) {
+            this.expression = expression;
+        }
+
+        @Override
+        <R> R accept(Visitor<R> visitor) {
+            return visitor.visitReturnStatement(this);
         }
     }
 }
