@@ -135,6 +135,13 @@ public class InterpreterTest {
         assertTrue(reporter.hasMessage("test"));
     }
 
+    @Test
+    public void itShouldBeAbleToDoMultiLevelGreaterThan() {
+        String source = "if ( 6 > 5 && 7 > 3 ) { print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
     private static class CatchSysOutReporter implements Interpreter.Reporter {
 
         private List<ReportParams> params;

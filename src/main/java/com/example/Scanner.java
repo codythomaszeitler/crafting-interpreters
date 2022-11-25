@@ -64,17 +64,16 @@ public class Scanner {
                 leftParen();
             } else if (startingChar == ')') {
                 rightParen();
-            } 
-            else if (startingChar == '>') {
+            } else if (startingChar == '>') {
                 greaterThan();
-            }
-            else if (startingChar == '!') {
+            } else if (startingChar == '&') {
+                and();
+            } else if (startingChar == '!') {
                 // Well this actually gets kind of complicated since
                 // it could be a ! or != and those are different tokens
                 // during lexical analysis.
                 bang();
-            }
-            else if (isAlpha(startingChar)) {
+            } else if (isAlpha(startingChar)) {
                 // Now this is where it gets interesting. We are going to use a STATEMENT (not
                 // an expression ;)
                 // This can either be an identifier or a keyword?
@@ -221,6 +220,12 @@ public class Scanner {
     private void greaterThan() {
         char greaterThan = advance();
         Token token = new Token(TokenType.GREATER, ">", greaterThan, this.line);
+        this.tokens.add(token);
+    }
+
+    private void and() {
+        String and = advance() + advance() + "";
+        Token token = new Token(TokenType.AND, "&&", and, this.line);
         this.tokens.add(token);
     }
 
