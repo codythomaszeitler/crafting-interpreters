@@ -1,5 +1,6 @@
 package com.example;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Stmt {
@@ -16,6 +17,8 @@ public abstract class Stmt {
         R visitBlockStatement(Stmt.Block statement);
 
         R visitIfStatement(Stmt.If statement);
+
+        R visitFunctionDeclStatement(Stmt.FuncDecl statement);
     }
 
     static class Print extends Stmt {
@@ -61,7 +64,6 @@ public abstract class Stmt {
     }
 
     public static class Block extends Stmt {
-        // This thing needs an environment during the ruin time.
         public final List<Stmt> statements;
 
         public Block(List<Stmt> statements) {
@@ -89,5 +91,23 @@ public abstract class Stmt {
             return visitor.visitIfStatement(this);
         }
 
+    }
+
+    public static class FuncDecl extends Stmt {
+
+        public final Token name;
+        public final List<String> arguments;
+        public final Stmt.Block block;
+
+        public FuncDecl(Token name, List<String> arguments, Stmt.Block block) {
+            this.name = name;
+            this.arguments = new ArrayList<String>(arguments);
+            this.block = block;
+        }
+
+        @Override
+        public <R> R accept(Visitor<R> visitor) {
+            return visitor.visitFunctionDeclStatement(this);
+        }
     }
 }

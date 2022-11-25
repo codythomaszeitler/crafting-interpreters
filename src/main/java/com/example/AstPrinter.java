@@ -2,6 +2,7 @@ package com.example;
 
 import com.example.Expr.Assign;
 import com.example.Expr.Binary;
+import com.example.Expr.Func;
 import com.example.Expr.Grouping;
 import com.example.Expr.Literal;
 import com.example.Expr.Unary;
@@ -54,6 +55,11 @@ public class AstPrinter implements Expr.Visitor<String> {
 
     @Override
     public String visitVariableAssign(Assign expr) {
+        return null;
+    }
+
+    @Override
+    public String visitFunctionExpression(Func expr) {
         return null;
     }
 }

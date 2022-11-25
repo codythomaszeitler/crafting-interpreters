@@ -142,6 +142,13 @@ public class InterpreterTest {
         assertTrue(reporter.hasMessage("test"));
     }
 
+    @Test
+    public void itShouldCallANamedFunction() {
+        String source = "func add(a, b) { print a + b; }; add(2, 3);";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("5.0"));
+    }
+
     private static class CatchSysOutReporter implements Interpreter.Reporter {
 
         private List<ReportParams> params;

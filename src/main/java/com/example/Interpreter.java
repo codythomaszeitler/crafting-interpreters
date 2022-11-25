@@ -4,12 +4,14 @@ import java.util.List;
 
 import com.example.Expr.Assign;
 import com.example.Expr.Binary;
+import com.example.Expr.Func;
 import com.example.Expr.Grouping;
 import com.example.Expr.Literal;
 import com.example.Expr.Unary;
 import com.example.Expr.Variable;
 import com.example.Stmt.Block;
 import com.example.Stmt.Expression;
+import com.example.Stmt.FuncDecl;
 import com.example.Stmt.If;
 import com.example.Stmt.Print;
 import com.example.Stmt.Var;
@@ -74,8 +76,7 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
             Double left = (Double) evaluate(visitor.left);
             Double right = (Double) evaluate(visitor.right);
             return left > right;
-        } 
-        else if (TokenType.AND == visitor.operator.type)  {
+        } else if (TokenType.AND == visitor.operator.type) {
             Boolean left = (Boolean) evaluate(visitor.left);
             Boolean right = (Boolean) evaluate(visitor.right);
             return left && right;
@@ -148,15 +149,34 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Void visitIfStatement(If statement) {
-        // We do not need to worry about the environment in this case....
-        // the block statement should really do that for us.
-
         Boolean shouldRunBlock = (Boolean) evaluate(statement.expression);
-
         if (shouldRunBlock) {
             execute(statement.block);
         }
-        
+        return null;
+    }
+
+    @Override
+    public Void visitFunctionDeclStatement(FuncDecl statement) {
+        this.environment.define(statement.name.lexeme, statement);
+        return null;
+    }
+
+    @Override
+    public Object visitFunctionExpression(Func expr) {
+        Environment previous = this.environment;
+        this.environment = new Environment(previous);
+
+        Stmt.FuncDecl functionDeclaration = (Stmt.FuncDecl) previous.get(expr.name.lexeme);
+        for (int i = 0; i < functionDeclaration.arguments.size(); i++) {
+            String name = functionDeclaration.arguments.get(i);
+            Expr value = expr.arguments.get(i);
+
+            this.environment.define(name, evaluate(value));
+        }
+
+        execute(functionDeclaration.block);
+        this.environment = previous;
         return null;
     }
 }
