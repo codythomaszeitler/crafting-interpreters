@@ -109,4 +109,13 @@ public class ScannerTest {
         Token unaryOperator = tokens.get(3);
         assertEquals(TokenType.BANG, unaryOperator.type);
     }
+
+    @Test
+    public void itShouldParseAndBooleanOperator() {
+        String source = "true && false";
+        Scanner testObject = new Scanner(source);
+
+        List<Token> tokens = testObject.scanTokens();
+        assertEquals(TokenType.AND, tokens.get(1).type);
+    }
 }
