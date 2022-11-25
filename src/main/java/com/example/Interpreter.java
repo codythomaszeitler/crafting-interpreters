@@ -10,6 +10,7 @@ import com.example.Expr.Unary;
 import com.example.Expr.Variable;
 import com.example.Stmt.Block;
 import com.example.Stmt.Expression;
+import com.example.Stmt.If;
 import com.example.Stmt.Print;
 import com.example.Stmt.Var;
 
@@ -28,8 +29,8 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Void visitPrintStatement(Print statement) {
-        Double value = (Double) evaluate(statement.expression);
-        reporter.report(new ReportParams(Double.toString(value)));
+        Object value = evaluate(statement.expression);
+        reporter.report(new ReportParams(value.toString()));
         return null;
     }
 
@@ -61,13 +62,33 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Object visitBinaryExpression(Binary visitor) {
-        Double left = (Double) evaluate(visitor.left);
-        Double right = (Double) evaluate(visitor.right);
-        return left + right;
+        // So if we make it a binary expression (which is maybe should be?)
+        // then this would have to account for the 
+
+        if (TokenType.PLUS == visitor.operator.type) {
+            Double left = (Double) evaluate(visitor.left);
+            Double right = (Double) evaluate(visitor.right);
+            return left + right;
+        } else if (TokenType.EQUAL_EQUAL == visitor.operator.type) {
+            Object left = evaluate(visitor.left);
+            Object right = evaluate(visitor.right);
+            return left.equals(right);
+        } else if (TokenType.GREATER == visitor.operator.type) {
+            Double left = (Double) evaluate(visitor.left);
+            Double right = (Double) evaluate(visitor.right);
+            return left > right;
+        } else {
+            return null;
+        }
     }
 
     @Override
     public Object visitUnaryExpression(Unary visitor) {
+        if (TokenType.BANG == visitor.operation.type) {
+            Boolean resolved = (Boolean) evaluate(visitor.expression);
+            Boolean banged = !resolved;
+            return banged;
+        }
         return null;
     }
 
@@ -120,6 +141,20 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
             execute(statement);
         }
         this.environment = previous;
+        return null;
+    }
+
+    @Override
+    public Void visitIfStatement(If statement) {
+        // We do not need to worry about the environment in this case....
+        // the block statement should really do that for us.
+
+        Boolean shouldRunBlock = (Boolean) evaluate(statement.expression);
+
+        if (shouldRunBlock) {
+            execute(statement.block);
+        }
+        
         return null;
     }
 }

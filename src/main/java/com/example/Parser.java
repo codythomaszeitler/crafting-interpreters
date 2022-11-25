@@ -28,17 +28,30 @@ public class Parser {
     }
 
     private Stmt declaration() {
-        Token maybeVarOrBlockStart = peek();
-        if (maybeVarOrBlockStart.type == TokenType.LEFT_BRACE) {
+        Token maybeVarOrBlockStmtOrIfStmt = peek();
+        if (maybeVarOrBlockStmtOrIfStmt.type == TokenType.IF) {
+            return ifStatement();
+        } else if (maybeVarOrBlockStmtOrIfStmt.type == TokenType.LEFT_BRACE) {
             return blockStatement();
-        } else if (maybeVarOrBlockStart.type == TokenType.VAR) {
+        } else if (maybeVarOrBlockStmtOrIfStmt.type == TokenType.VAR) {
             return varDeclaration();
         } else {
             return statement();
         }
     }
 
-    private Stmt blockStatement() {
+    private Stmt ifStatement() {
+        Token ifToken = advance();
+        Token leftParen = advance();
+        Expr expression = expression();
+        Token rightParent = advance();
+        Stmt.Block blockStatement = blockStatement();
+
+        Stmt.If ifStatement = new Stmt.If(expression, blockStatement);
+        return ifStatement;
+    }
+
+    private Stmt.Block blockStatement() {
         Token leftBrace = advance();
 
         List<Stmt> statements = new ArrayList<Stmt>();
@@ -83,33 +96,41 @@ public class Parser {
     }
 
     private Expr assignment() {
-
-        // So this is a left hand thing of the = thingermorebob
-        // WAit wait wait... hold the phone. WTF is this doing exactly?
-        Expr expression = equality();
+        Expr maybeAssignmentToName = equality();
 
         Token maybeEquals = peek();
         if (maybeEquals.type == TokenType.EQUAL) {
             Token equals = advance();
-            Expr value = assignment();
+            Expr rightHandSide = assignment();
 
-            if (expression instanceof Expr.Variable) {
-                Expr.Variable variable = (Expr.Variable) expression;
-                Token name = variable.name;
+            if (maybeAssignmentToName instanceof Expr.Variable) {
+                Expr.Variable leftHandSideName = (Expr.Variable) maybeAssignmentToName;
+                Token name = leftHandSideName.name;
 
-                return new Expr.Assign(name, value);
+                return new Expr.Assign(name, rightHandSide);
             }
             return null;
         }
-        return expression;
+        return maybeAssignmentToName;
     }
 
     private Expr equality() {
-        return comparison();
+        Expr leftHandSide = comparison();
+        while (match(TokenType.EQUAL_EQUAL)) {
+            Token equalsEquals = advance();
+            leftHandSide = new Expr.Binary(leftHandSide, equalsEquals, comparison());
+        }
+        return leftHandSide;
     }
 
     private Expr comparison() {
-        return term();
+        Expr leftHandSide = term();
+        while (match(TokenType.GREATER)) {
+            Token comparisonOperator = advance();
+            leftHandSide = new Expr.Binary(leftHandSide, comparisonOperator, term());
+        }
+
+        return leftHandSide;
     }
 
     private Expr term() {
@@ -118,6 +139,7 @@ public class Parser {
             Token operator = advance();
             Expr right = factor();
 
+            // We do already have the operator here... 
             return new Expr.Binary(left, operator, right);
         }
         return left;
@@ -128,13 +150,24 @@ public class Parser {
     }
 
     private Expr unary() {
-        return primary();
+        Token maybeUnaryOperator = peek();
+        if (maybeUnaryOperator.type == TokenType.BANG) {
+            Token unaryOperator = advance();
+            Expr toBang = expression();
+            return new Expr.Unary(unaryOperator, toBang);
+        } else {
+            return primary();
+        }
     }
 
     private Expr primary() {
         Token first = advance();
 
-        if (first.type == TokenType.NUMBER) {
+        if (first.type == TokenType.STRING) {
+            return new Expr.Literal(first.lexeme);
+        } else if (first.type == TokenType.TRUE || first.type == TokenType.FALSE) {
+            return new Expr.Literal(Boolean.parseBoolean(first.lexeme));
+        } else if (first.type == TokenType.NUMBER) {
             return new Expr.Literal(Double.parseDouble(first.lexeme));
         } else {
             return new Expr.Variable(first);

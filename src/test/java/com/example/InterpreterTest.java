@@ -1,5 +1,6 @@
 package com.example;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
@@ -11,9 +12,8 @@ import com.example.Interpreter.ReportParams;
 
 public class InterpreterTest {
 
-    @Test
-    public void test1() {
-        Scanner scanner = new Scanner("print 3 + 5; var cody = 5; print cody; cody = 6; print cody;");
+    private CatchSysOutReporter runInterpreterAgainst(String source) {
+        Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
         Parser parser = new Parser(tokens);
 
@@ -23,6 +23,14 @@ public class InterpreterTest {
 
         Interpreter testObject = new Interpreter(reporter);
         testObject.interpret(statements);
+
+        return reporter;
+    }
+
+    @Test
+    public void test1() {
+        CatchSysOutReporter reporter = runInterpreterAgainst(
+                "print 3 + 5; var cody = 5; print cody; cody = 6; print cody;");
 
         assertTrue(reporter.hasMessage("8.0"));
         assertTrue(reporter.hasMessage("5.0"));
@@ -32,16 +40,7 @@ public class InterpreterTest {
     @Test
     public void testBlockScoping() {
         String source = "var cody = 5; { var cody = 6; print cody; } print cody;";
-        Scanner scanner = new Scanner(source);
-
-        List<Token> tokens = scanner.scanTokens();
-        Parser parser = new Parser(tokens);
-
-        CatchSysOutReporter reporter = new CatchSysOutReporter();
-
-        List<Stmt> statements = parser.parse();
-        Interpreter testObject = new Interpreter(reporter);
-        testObject.interpret(statements);
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
 
         assertTrue(reporter.hasMessage("6.0"));
         assertTrue(reporter.hasMessage("5.0"));
@@ -50,21 +49,97 @@ public class InterpreterTest {
     @Test
     public void testDoubleBlockingScope() {
         String source = "var cody = 5; { { var cody = 8; print cody; }  var cody = 6; print cody; { var cody = 123; print cody;} } print cody;";
-        Scanner scanner = new Scanner(source);
-
-        List<Token> tokens = scanner.scanTokens();
-        Parser parser = new Parser(tokens);
-
-        CatchSysOutReporter reporter = new CatchSysOutReporter();
-
-        List<Stmt> statements = parser.parse();
-        Interpreter testObject = new Interpreter(reporter);
-        testObject.interpret(statements);
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
 
         assertTrue(reporter.hasMessage("6.0"));
         assertTrue(reporter.hasMessage("8.0"));
         assertTrue(reporter.hasMessage("123.0"));
         assertTrue(reporter.hasMessage("5.0"));
+    }
+
+    @Test
+    public void itShouldBeAbleToPrintTrueInAVar() {
+        String source = "var cody = true; print cody;";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+
+        assertTrue(reporter.hasMessage("true"));
+    }
+
+    @Test
+    public void testIfConditionalWorksInTrueCase() {
+        String source = "var cody = true; if (cody) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void testIfConditionalWorksInFalseCase() {
+        String source = "var cody = false; if (cody) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertFalse(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToUseConditionalWithRawTrue() {
+        String source = "if (true) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToNotEnterOnUnaryTrueOperation() {
+        String source = "if (!true) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertFalse(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToRunEquals() {
+        String source = "if (5 == 5) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToRunEqualsWhenFalse() {
+        String source = "if (5 == 6) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertFalse(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToRunEqualsWithVars() {
+        String source = "var cody = 5; var kirk = 5; if (cody == kirk) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToRunEqualsWithInlineAddition() {
+        String source = "var cody = 5; var kirk = 4; if (cody == kirk + 1) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToDoMultiLevelEquals() {
+        String source = "if (5 == 5 == 5 == 5 == 5 == 6) {print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertFalse(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToDoGreaterThan() {
+        String source = "if ( 6 > 5 ) { print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
+
+    @Test
+    public void itShouldBeAbleToDoMultiLevelGreaterThan() {
+        String source = "if ( 6 > 5 && 7 > 3 ) { print \"test\"; }";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
     }
 
     private static class CatchSysOutReporter implements Interpreter.Reporter {

@@ -18,6 +18,9 @@ public class Scanner {
         reserved = new HashMap<>();
         reserved.put("var", TokenType.VAR);
         reserved.put("print", TokenType.PRINT);
+        reserved.put("true", TokenType.TRUE);
+        reserved.put("false", TokenType.FALSE);
+        reserved.put("if", TokenType.IF);
     }
 
     private int current;
@@ -57,6 +60,19 @@ public class Scanner {
                 blockStart();
             } else if (startingChar == '}') {
                 blockEnd();
+            } else if (startingChar == '(') {
+                leftParen();
+            } else if (startingChar == ')') {
+                rightParen();
+            } else if (startingChar == '>') {
+                greaterThan();
+            } else if (startingChar == '&') {
+                and();
+            } else if (startingChar == '!') {
+                // Well this actually gets kind of complicated since
+                // it could be a ! or != and those are different tokens
+                // during lexical analysis.
+                bang();
             } else if (isAlpha(startingChar)) {
                 // Now this is where it gets interesting. We are going to use a STATEMENT (not
                 // an expression ;)
@@ -161,7 +177,8 @@ public class Scanner {
     }
 
     private void digit() {
-        // So wait... this thing can be super long... how do we know that we are out of stuff? 
+        // So wait... this thing can be super long... how do we know that we are out of
+        // stuff?
         String digitAsString = advance() + "";
         while (isDigit(peek())) {
             digitAsString += advance();
@@ -185,6 +202,36 @@ public class Scanner {
     private void blockEnd() {
         char blockEnd = advance();
         Token token = new Token(TokenType.RIGHT_BRACE, "}", blockEnd, this.line);
+        this.tokens.add(token);
+    }
+
+    private void leftParen() {
+        char leftParen = advance();
+        Token token = new Token(TokenType.LEFT_PAREN, "(", leftParen, this.line);
+        this.tokens.add(token);
+    }
+
+    private void rightParen() {
+        char rightParen = advance();
+        Token token = new Token(TokenType.RIGHT_PAREN, ")", rightParen, this.line);
+        this.tokens.add(token);
+    }
+
+    private void greaterThan() {
+        char greaterThan = advance();
+        Token token = new Token(TokenType.GREATER, ">", greaterThan, this.line);
+        this.tokens.add(token);
+    }
+
+    private void and() {
+        String and = advance() + advance() + "";
+        Token token = new Token(TokenType.AND, "&&", and, this.line);
+        this.tokens.add(token);
+    }
+
+    private void bang() {
+        char bang = advance();
+        Token token = new Token(TokenType.BANG, "!", bang, this.line);
         this.tokens.add(token);
     }
 

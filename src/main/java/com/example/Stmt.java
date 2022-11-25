@@ -14,6 +14,8 @@ public abstract class Stmt {
         R visitVarDeclaration(Stmt.Var statement);
 
         R visitBlockStatement(Stmt.Block statement);
+
+        R visitIfStatement(Stmt.If statement);
     }
 
     static class Print extends Stmt {
@@ -70,5 +72,22 @@ public abstract class Stmt {
         public <R> R accept(Visitor<R> visitor) {
             return visitor.visitBlockStatement(this);
         }
+    }
+   
+    public static class If extends Stmt {
+
+        public final Expr expression;
+        public final Block block;
+
+        public If(Expr expression, Stmt.Block block) {
+            this.expression = expression;
+            this.block = block;
+        }
+
+        @Override
+        public <R> R accept(Visitor<R> visitor) {
+            return visitor.visitIfStatement(this);
+        }
+
     }
 }
