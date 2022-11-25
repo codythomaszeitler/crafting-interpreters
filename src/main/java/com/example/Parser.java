@@ -53,6 +53,10 @@ public class Parser {
             return blockStatement();
         } else if (maybeVarOrBlockStmtOrIfStmt.type == TokenType.VAR) {
             return varDeclaration();
+        } else if (maybeVarOrBlockStmtOrIfStmt.type == TokenType.FUN) {
+            return functionDeclaration();   
+        } else if (maybeVarOrBlockStmtOrIfStmt.type == TokenType.RETURN) {
+            return returnStatement();
         } else {
             return statement();
         }
@@ -92,6 +96,41 @@ public class Parser {
         }
         advance();
         return new Stmt.Var(name, initializer);
+    }
+
+    private Stmt returnStatement() {
+        consume(TokenType.RETURN);
+        Expr expression = expression();
+        Stmt.Return stmt = new Stmt.Return(expression);
+        consume(TokenType.SEMICOLON);
+        return stmt;
+    }
+
+    private Stmt functionDeclaration() {
+        consume(TokenType.FUN);
+        Token name = advance();
+        consume(TokenType.LEFT_PAREN);
+
+        Token maybeRightParen = peek();
+        if (maybeRightParen.type == TokenType.RIGHT_PAREN) {
+            consume(TokenType.RIGHT_PAREN);
+            return new Stmt.FuncDecl(name, new ArrayList<String>(), blockStatement());
+        }
+
+        List<String> arguments = new ArrayList<String>();
+        while (!match(TokenType.RIGHT_PAREN)) {
+            Token argument = advance();
+            Token maybeComma = peek();
+            if (maybeComma.type == TokenType.COMMA) {
+                consume(TokenType.COMMA);
+            } 
+            arguments.add(argument.lexeme);
+        }
+        
+        consume(TokenType.RIGHT_PAREN);
+        Stmt functionDecl = new Stmt.FuncDecl(name, arguments, blockStatement());
+        consume(TokenType.SEMICOLON);
+        return functionDecl;
     }
 
     private Stmt statement() {
@@ -152,7 +191,7 @@ public class Parser {
 
     private Expr comparison() {
         Expr leftHandSide = term();
-        while (match(TokenType.GREATER)) {
+        while (match(TokenType.GREATER, TokenType.LESS_EQUAL)) {
             Token comparisonOperator = advance();
             leftHandSide = new Expr.Binary(leftHandSide, comparisonOperator, term());
         }
@@ -189,7 +228,6 @@ public class Parser {
 
     private Expr primary() {
         Token first = advance();
-
         if (first.type == TokenType.STRING) {
             return new Expr.Literal(first.lexeme);
         } else if (first.type == TokenType.TRUE || first.type == TokenType.FALSE) {
@@ -197,8 +235,27 @@ public class Parser {
         } else if (first.type == TokenType.NUMBER) {
             return new Expr.Literal(Double.parseDouble(first.lexeme));
         } else {
-            return new Expr.Variable(first);
+            if (match(TokenType.LEFT_PAREN)) {
+                return new Expr.Func(first, functionArguments());
+            } else {
+                return new Expr.Variable(first);
+            }
         }
+    }
+
+    private List<Expr> functionArguments() {
+        List<Expr> arguments = new ArrayList<Expr>();
+        consume(TokenType.LEFT_PAREN);
+        while (!match(TokenType.RIGHT_PAREN)) {
+            arguments.add(expression());
+            Token maybeComma = peek();
+
+            if (maybeComma.type == TokenType.COMMA) {
+                consume(TokenType.COMMA);
+            }
+        }
+        consume(TokenType.RIGHT_PAREN);
+        return arguments;
     }
 
     private Token peek() {

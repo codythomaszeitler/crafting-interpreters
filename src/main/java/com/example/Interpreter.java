@@ -4,12 +4,14 @@ import java.util.List;
 
 import com.example.Expr.Assign;
 import com.example.Expr.Binary;
+import com.example.Expr.Func;
 import com.example.Expr.Grouping;
 import com.example.Expr.Literal;
 import com.example.Expr.Unary;
 import com.example.Expr.Variable;
 import com.example.Stmt.Block;
 import com.example.Stmt.Expression;
+import com.example.Stmt.FuncDecl;
 import com.example.Stmt.If;
 import com.example.Stmt.Print;
 import com.example.Stmt.Var;
@@ -25,6 +27,20 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     public Interpreter(Interpreter.Reporter reporter) {
         this.reporter = reporter;
+    }
+
+    void interpret(List<Stmt> statements) {
+        for (Stmt statement : statements) {
+            execute(statement);
+        }
+    }
+
+    private void execute(Stmt statement) {
+        statement.accept(this);
+    }
+
+    private Object evaluate(Expr expression) {
+        return expression.accept(this);
     }
 
     @Override
@@ -46,20 +62,6 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
         return null;
     }
 
-    void interpret(List<Stmt> statements) {
-        for (Stmt statement : statements) {
-            execute(statement);
-        }
-    }
-
-    private void execute(Stmt statement) {
-        statement.accept(this);
-    }
-
-    private Object evaluate(Expr expression) {
-        return expression.accept(this);
-    }
-
     @Override
     public Object visitBinaryExpression(Binary visitor) {
         if (TokenType.PLUS == visitor.operator.type) {
@@ -74,11 +76,19 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
             Double left = (Double) evaluate(visitor.left);
             Double right = (Double) evaluate(visitor.right);
             return left > right;
-        } 
-        else if (TokenType.AND == visitor.operator.type)  {
+        } else if (TokenType.AND == visitor.operator.type) {
             Boolean left = (Boolean) evaluate(visitor.left);
             Boolean right = (Boolean) evaluate(visitor.right);
             return left && right;
+        } else if (TokenType.LESS_EQUAL == visitor.operator.type) {
+            Double left = (Double) evaluate(visitor.left);
+            Double right = (Double) evaluate(visitor.right);
+            return left <= right;
+        } 
+        else if (TokenType.MINUS == visitor.operator.type) {
+            Double left = (Double) evaluate(visitor.left);
+            Double right = (Double) evaluate(visitor.right);
+            return left - right;
         } else {
             return null;
         }
@@ -116,6 +126,61 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
         return null;
     }
 
+    @Override
+    public Void visitBlockStatement(Block block) {
+        Environment previous = this.environment;
+        this.environment = new Environment(this.environment);
+        for (Stmt statement : block.statements) {
+            execute(statement);
+        }
+        this.environment = previous;
+        return null;
+    }
+
+    @Override
+    public Void visitIfStatement(If statement) {
+        Boolean shouldRunBlock = (Boolean) evaluate(statement.expression);
+        if (shouldRunBlock) {
+            execute(statement.block);
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitFunctionDeclStatement(FuncDecl statement) {
+        this.environment.define(statement.name.lexeme, statement);
+        return null;
+    }
+
+    @Override
+    public Object visitFunctionExpression(Func expr) {
+        Environment previous = this.environment;
+        this.environment = new Environment(previous);
+
+        Stmt.FuncDecl functionDeclaration = (Stmt.FuncDecl) previous.get(expr.name.lexeme);
+        for (int i = 0; i < functionDeclaration.arguments.size(); i++) {
+            String name = functionDeclaration.arguments.get(i);
+            Expr value = expr.arguments.get(i);
+
+            this.environment.define(name, evaluate(value));
+        }
+
+        try {
+            execute(functionDeclaration.block);
+        } catch (Interpreter.Return e) {
+            return e.value;
+        } finally {
+            this.environment = previous;
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitReturnStatement(Stmt.Return statement) {
+        Object value = evaluate(statement.expression);
+        throw new Interpreter.Return(value);
+    }
+
     public static interface Reporter {
         public void report(ReportParams params);
     }
@@ -135,28 +200,11 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
         }
     }
 
-    @Override
-    public Void visitBlockStatement(Block block) {
-        Environment previous = this.environment;
-        this.environment = new Environment(this.environment);
-        for (Stmt statement : block.statements) {
-            execute(statement);
+    private static class Return extends RuntimeException {
+        public final Object value;
+
+        public Return(Object value) {
+            this.value = value;
         }
-        this.environment = previous;
-        return null;
-    }
-
-    @Override
-    public Void visitIfStatement(If statement) {
-        // We do not need to worry about the environment in this case....
-        // the block statement should really do that for us.
-
-        Boolean shouldRunBlock = (Boolean) evaluate(statement.expression);
-
-        if (shouldRunBlock) {
-            execute(statement.block);
-        }
-        
-        return null;
     }
 }

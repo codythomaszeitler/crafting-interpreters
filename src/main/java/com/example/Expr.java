@@ -1,5 +1,8 @@
 package com.example;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public abstract class Expr {
 
     public abstract <R> R accept(Visitor<R> visitor);
@@ -16,6 +19,8 @@ public abstract class Expr {
         R visitVariableExpr(Expr.Variable expr);
 
         R visitVariableAssign(Expr.Assign expr);
+
+        R visitFunctionExpression(Expr.Func expr);
     }
 
     public static class Binary extends Expr {
@@ -102,5 +107,20 @@ public abstract class Expr {
         }
 
         final Token name;
+    }
+
+    public static class Func extends Expr {
+        public final Token name;
+        public final List<Expr> arguments;
+
+        public Func(Token name, List<Expr> arguments) {
+            this.name = name;
+            this.arguments = new ArrayList<Expr>(arguments);
+        }
+
+        @Override
+        public <R> R accept(Visitor<R> visitor) {
+            return visitor.visitFunctionExpression(this);
+        }
     }
 }
