@@ -184,6 +184,13 @@ public class InterpreterTest {
         CatchSysOutReporter reporter = runInterpreterAgainst(source);
         assertTrue(reporter.hasMessage("1.0"));
     }
+
+    @Test
+    public void itShouldRunAPrivateInnerFunction() {
+        String source = "func foo() { func test() { print \"test\"; }; test();}; foo();";
+        CatchSysOutReporter reporter = runInterpreterAgainst(source);
+        assertTrue(reporter.hasMessage("test"));
+    }
     
 
     private static class CatchSysOutReporter implements Interpreter.Reporter {

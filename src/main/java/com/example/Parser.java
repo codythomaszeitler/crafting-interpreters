@@ -114,7 +114,9 @@ public class Parser {
         Token maybeRightParen = peek();
         if (maybeRightParen.type == TokenType.RIGHT_PAREN) {
             consume(TokenType.RIGHT_PAREN);
-            return new Stmt.FuncDecl(name, new ArrayList<String>(), blockStatement());
+            Stmt functionDecl = new Stmt.FuncDecl(name, new ArrayList<String>(), blockStatement());
+            consume(TokenType.SEMICOLON);
+            return functionDecl;
         }
 
         List<String> arguments = new ArrayList<String>();
@@ -139,7 +141,7 @@ public class Parser {
             advance();
             Expr expression = expression();
             Stmt statement = new Stmt.Print(expression);
-            advance();
+            consume(TokenType.SEMICOLON);
             return statement;
         } else {
             Expr expression = expression();
