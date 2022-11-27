@@ -206,8 +206,6 @@ public class Parser {
         if (match(TokenType.PLUS, TokenType.MINUS)) {
             Token operator = advance();
             Expr right = factor();
-
-            // We do already have the operator here...
             return new Expr.Binary(left, operator, right);
         }
         return left;

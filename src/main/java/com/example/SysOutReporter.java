@@ -4,7 +4,7 @@ import com.example.Interpreter.InterpreterReportParams;
 import com.example.Parser.ParserErrorParams;
 import com.example.Scanner.ScannerErrorParams;
 
-public class SysOutReporter implements ErrorReporter {
+public class SysOutReporter implements Reporter {
 
     @Override
     public void report(InterpreterReportParams params) {

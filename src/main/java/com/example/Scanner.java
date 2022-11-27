@@ -104,7 +104,6 @@ public class Scanner {
     }
 
     private void equalsOrDoubleEquals() {
-        // So this will always be an equals character.
         advance();
         char maybeSecondEquals = peek();
         if (maybeSecondEquals == '=') {
@@ -125,9 +124,8 @@ public class Scanner {
 
     private void string() {
         advance();
-
         String lexeme = "";
-        while (isAlphaNumeric(peek())) {
+        while (isAlphaNumeric(peek()) || peek() == ',' || isWhitespace(peek()) || peek() == '!') {
             lexeme += advance();
         }
 

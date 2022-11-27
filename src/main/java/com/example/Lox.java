@@ -4,19 +4,20 @@ import java.util.List;
 
 public class Lox {
 
-    // I am 100% sure we should probably add on error reporting before we do this
-    public Lox( Parser.Reporter parserReporter, Interpreter.Reporter interpreterReporter) {
+    private final Reporter reporter;
 
+    public Lox(Reporter reporter) {
+        this.reporter = reporter;
     }
 
     public void execute(String source) {
-        Scanner scanner = new Scanner(source);
+        Scanner scanner = new Scanner(source, reporter);
         List<Token> tokens = scanner.scanTokens();
 
-        Parser parser = new Parser(tokens);
+        Parser parser = new Parser(tokens, reporter);
         List<Stmt> statements = parser.parse();
 
-        Interpreter interpreter = new Interpreter();
+        Interpreter interpreter = new Interpreter(reporter);
         interpreter.interpret(statements);
     }
 }

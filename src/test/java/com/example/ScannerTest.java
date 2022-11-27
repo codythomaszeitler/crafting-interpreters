@@ -131,4 +131,18 @@ public class ScannerTest {
 
         assertTrue(reporter.hasErrorMessage("Lox compile error: Unexpected character \"`\" found at line 1"));
     }
+
+    @Test
+    public void itShouldScanWithComma() {
+        String source = "print \"Hello, World!\";";
+        Scanner testObject = new Scanner(source);
+
+        List<Token> tokens = testObject.scanTokens();
+        assertEquals(4, tokens.size());
+
+        Token shouldBeHelloWorld = tokens.get(1);
+        assertEquals(TokenType.STRING, shouldBeHelloWorld.type);
+
+        assertEquals("Hello, World!", shouldBeHelloWorld.lexeme);
+    }
 }
