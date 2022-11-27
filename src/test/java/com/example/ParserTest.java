@@ -3,12 +3,9 @@ package com.example;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.Test;
-
-import com.example.Parser.ErrorParams;
 
 public class ParserTest {
     //  do not do that
@@ -43,7 +40,7 @@ public class ParserTest {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
 
-        CatchSysOutReporter reporter = new CatchSysOutReporter();
+        TestParserReporter reporter = new TestParserReporter();
 
         Parser testObject = new Parser(tokens, reporter);
         testObject.parse();
@@ -57,28 +54,11 @@ public class ParserTest {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
 
-        CatchSysOutReporter reporter = new CatchSysOutReporter();
+        TestParserReporter reporter = new TestParserReporter();
 
         Parser testObject = new Parser(tokens, reporter);
         testObject.parse();
 
         assertTrue(reporter.hasErrorMessage("Lox compile error: expected RIGHT_PAREN at line 1, found \"{\"."));
-    }
-
-    private class CatchSysOutReporter implements Parser.Reporter {
-
-        private final List<String> errorMessages;
-        public CatchSysOutReporter() {
-            this.errorMessages = new ArrayList<>();
-        }
-
-        @Override
-        public void reportError(ErrorParams params) {
-            this.errorMessages.add(params.getErrorMessage()); 
-        }
-
-        public Boolean hasErrorMessage(String errorMessage) {
-            return this.errorMessages.contains(errorMessage);
-        }
     }
 }
