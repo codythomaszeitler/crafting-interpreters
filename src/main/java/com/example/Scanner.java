@@ -1,10 +1,5 @@
 package com.example;
 
-// How do we handle whitespace?
-// removing all the whitespace after you've done tokenizing something 
-// is probably really important and not something you always have to do
-// but probably is a general problem that you need to solve.
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,16 +27,20 @@ public class Scanner {
     private Boolean hasError;
 
     private List<Token> tokens;
-    private ErrorReport reporter;
+    private Reporter reporter;
 
     public Scanner(String source) {
+        this(source, new SysOutReporter());
+    }
+
+    public Scanner(String source, Reporter reporter) {
         this.start = 0;
         this.current = 0;
         this.line = 1;
         this.source = source;
         this.tokens = new ArrayList<>();
         this.hasError = false;
-        this.reporter = new SysOutErrorReport();
+        this.reporter = reporter;
     }
 
     public List<Token> scanTokens() {
@@ -49,7 +48,6 @@ public class Scanner {
 
             chewUpWhitespace();
 
-            // So we have already technically read the character at this point
             this.start = this.current;
             char startingChar = this.peek();
 
@@ -69,28 +67,17 @@ public class Scanner {
                 rightParen();
             } else if (startingChar == '>') {
                 greaterThan();
-            } 
-            else if (startingChar == '<') {
+            } else if (startingChar == '<') {
                 lessThanOrLessThanOrEqualTo();
-            }
-            else if (startingChar == '-') {
+            } else if (startingChar == '-') {
                 subtraction();
-            }
-            else if (startingChar == ',') {
+            } else if (startingChar == ',') {
                 comma();
-            } 
-            else if (startingChar == '&') {
-                // Oh... this is the wrong and?
+            } else if (startingChar == '&') {
                 and();
             } else if (startingChar == '!') {
-                // Well this actually gets kind of complicated since
-                // it could be a ! or != and those are different tokens
-                // during lexical analysis.
                 bang();
             } else if (isAlpha(startingChar)) {
-                // Now this is where it gets interesting. We are going to use a STATEMENT (not
-                // an expression ;)
-                // This can either be an identifier or a keyword?
                 identifierOrKeyword();
             } else if (isQuote(startingChar)) {
                 string();
@@ -98,9 +85,9 @@ public class Scanner {
                 digit();
             } else {
                 startingChar = advance();
-                // This is the error case?
                 this.hasError = true;
-                this.reporter.report(this.line, "", "Unexpected character found: [" + startingChar + "]");
+
+                this.reporter.reportError(new ScannerErrorParams(startingChar, this.line));
             }
         }
 
@@ -168,8 +155,6 @@ public class Scanner {
         while (isAlphaNumeric(peek())) {
             advance();
         }
-        // So at this point, you have a start and a current that are in the correct
-        // spots.
         String lexeme = this.source.substring(start, current);
         if (reserved.containsKey(lexeme)) {
             Token token = new Token(reserved.get(lexeme), lexeme, lexeme, line);
@@ -290,5 +275,31 @@ public class Scanner {
         }
 
         return this.source.charAt(this.current++);
+    }
+
+    public static class ScannerErrorParams {
+        private final char unexpected;
+        private final int line;
+
+        private ScannerErrorParams(char unexpected, int line) {
+            this.unexpected = unexpected;
+            this.line = line;
+        }
+
+        public String getErrorMessage() {
+            String formatString = "Lox compile error: Unexpected character \"%c\" found at line %d";
+            return String.format(formatString, new Object[]{this.unexpected, this.line});
+        }
+    }
+
+    public static interface Reporter {
+        public void reportError(ScannerErrorParams params);
+    }
+
+    public static class SysOutReporter implements Reporter {
+        @Override
+        public void reportError(ScannerErrorParams params) {
+            System.out.println(params.getErrorMessage());
+        }
     }
 }

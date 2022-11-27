@@ -7,7 +7,7 @@ import java.util.List;
 
 import org.junit.Test;
 
-import com.example.Parser.ErrorParams;
+import com.example.Parser.ParserErrorParams;
 
 public class InterpreterTest {
 
@@ -192,7 +192,7 @@ public class InterpreterTest {
 
     private static class FailOnCompileError implements Parser.Reporter {
         @Override
-        public void reportError(ErrorParams params) {
+        public void reportError(ParserErrorParams params) {
             throw new RuntimeException(params.getErrorMessage());
         }
     }

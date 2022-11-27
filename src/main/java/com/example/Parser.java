@@ -26,7 +26,7 @@ public class Parser {
             try {
                 statements.add(declaration());
             } catch (Parser.ParseError e) {
-                ErrorParams params = new ErrorParams(e);
+                ParserErrorParams params = new ParserErrorParams(e);
                 this.reporter.reportError(params);
                 synchronize();
             }
@@ -305,13 +305,13 @@ public class Parser {
     }
 
     public static interface Reporter {
-        public void reportError(ErrorParams params);
+        public void reportError(ParserErrorParams params);
     }
 
-    public static class ErrorParams {
+    public static class ParserErrorParams {
         private final ParseError error;
 
-        public ErrorParams(ParseError e) {
+        public ParserErrorParams(ParseError e) {
             this.error = e;
         }
 
@@ -322,7 +322,7 @@ public class Parser {
 
     public static class SysOutReporter implements Reporter {
         @Override
-        public void reportError(ErrorParams params) {
+        public void reportError(ParserErrorParams params) {
             System.out.println(params.getErrorMessage());
         }
     }

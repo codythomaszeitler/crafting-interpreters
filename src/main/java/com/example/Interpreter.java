@@ -46,7 +46,7 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     @Override
     public Void visitPrintStatement(Print statement) {
         Object value = evaluate(statement.expression);
-        reporter.report(new ReportParams(value.toString()));
+        reporter.report(new InterpreterReportParams(value.toString()));
         return null;
     }
 
@@ -182,20 +182,24 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     }
 
     public static interface Reporter {
-        public void report(ReportParams params);
+        public void report(InterpreterReportParams params);
     }
 
-    public static class ReportParams {
-        public final String message;
+    public static class InterpreterReportParams {
+        private final String message;
 
-        public ReportParams(String message) {
+        public InterpreterReportParams(String message) {
             this.message = message;
+        }
+
+        public String getMessage() {
+            return this.message;
         }
     }
 
     public static class SysOutReporter implements Reporter {
         @Override
-        public void report(ReportParams params) {
+        public void report(InterpreterReportParams params) {
             System.out.println(params.message);
         }
     }

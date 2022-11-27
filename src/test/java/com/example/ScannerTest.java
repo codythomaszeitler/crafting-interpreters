@@ -2,10 +2,12 @@
 package com.example;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 
 import org.junit.Test;
+import org.junit.internal.runners.TestMethod;
 
 public class ScannerTest {
     @Test
@@ -61,7 +63,7 @@ public class ScannerTest {
 
     @Test
     public void testTokenizeTrueBoolean() {
-        String source = "var cody = true;"; 
+        String source = "var cody = true;";
         Scanner testObject = new Scanner(source);
 
         List<Token> tokens = testObject.scanTokens();
@@ -71,7 +73,7 @@ public class ScannerTest {
 
     @Test
     public void testTokenizeFalseBoolean() {
-        String source = "var cody = false;"; 
+        String source = "var cody = false;";
         Scanner testObject = new Scanner(source);
 
         List<Token> tokens = testObject.scanTokens();
@@ -117,5 +119,16 @@ public class ScannerTest {
 
         List<Token> tokens = testObject.scanTokens();
         assertEquals(TokenType.AND, tokens.get(1).type);
+    }
+
+    @Test
+    public void itShouldLogErrorWithBadToken() {
+        TestScannerReporter reporter = new TestScannerReporter();
+
+        String source = "as ` 45";
+        Scanner testObject = new Scanner(source, reporter);
+        testObject.scanTokens();
+
+        assertTrue(reporter.hasErrorMessage("Lox compile error: Unexpected character \"`\" found at line 1"));
     }
 }
