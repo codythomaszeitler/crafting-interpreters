@@ -5,6 +5,18 @@ import java.util.List;
 
 public abstract class Expr {
 
+    private static long currentId = 0;
+
+    private final Id id;
+
+    public Expr() {
+        this.id = Id.get(currentId++);
+    }
+
+    public Id getId() {
+        return this.id;
+    }
+
     public abstract <R> R accept(Visitor<R> visitor);
 
     interface Visitor<R> {

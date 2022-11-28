@@ -1,6 +1,8 @@
 package com.example;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.example.Expr.Assign;
 import com.example.Expr.Binary;
@@ -21,12 +23,21 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     private Environment environment = new Environment();
     private final Interpreter.Reporter reporter;
 
+    private final Map<Id, StaticResolutionBlock> blockIdToBindings;
+
+    private Id currentBlockId;
+
     public Interpreter() {
         this(new SysOutReporter());
     }
 
     public Interpreter(Interpreter.Reporter reporter) {
+        this(reporter, new HashMap<Id, StaticResolutionBlock>());
+    }
+
+    public Interpreter(Interpreter.Reporter reporter, Map<Id, StaticResolutionBlock> blockIdToBindings) {
         this.reporter = reporter;
+        this.blockIdToBindings = blockIdToBindings;
     }
 
     void interpret(List<Stmt> statements) {
@@ -116,7 +127,30 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Object visitVariableExpr(Variable expr) {
-        return this.environment.get(expr.name.lexeme);
+        StaticResolutionBlock block = this.blockIdToBindings.get(this.currentBlockId);
+        Integer distance = block.getDistance(expr.getId());
+        Environment env = getParentEnv(distance);
+        return env.get(expr.name.lexeme);
+    }
+
+    private Environment getParentEnv(Integer distance) {
+        if (distance == null) {
+            return getGlobalEnv();
+        }
+
+        Environment current = this.environment;
+        for (Integer i = 0; i < distance; i++) {
+            current = current.enclosing;
+        }
+        return current;
+    }
+
+    private Environment getGlobalEnv() {
+        Environment global = environment;
+        while (global.enclosing != null) {
+            global = global.enclosing;
+        }
+        return global;
     }
 
     @Override
@@ -130,10 +164,14 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     public Void visitBlockStatement(Block block) {
         Environment previous = this.environment;
         this.environment = new Environment(this.environment);
+
+        Id previousBlockId = this.currentBlockId;
+        this.currentBlockId = block.getId();
         for (Stmt statement : block.statements) {
             execute(statement);
         }
         this.environment = previous;
+        this.currentBlockId = previousBlockId;
         return null;
     }
 

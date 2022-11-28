@@ -1,6 +1,7 @@
 package com.example;
 
 import java.util.List;
+import java.util.Map;
 
 public class Lox {
 
@@ -17,7 +18,11 @@ public class Lox {
         Parser parser = new Parser(tokens, reporter);
         List<Stmt> statements = parser.parse();
 
-        Interpreter interpreter = new Interpreter(reporter);
+        Resolver closureBinder = new Resolver();
+        Map<Id, StaticResolutionBlock> blockIdToBindings = 
+            closureBinder.parseStaticVariableBindings(statements);
+
+        Interpreter interpreter = new Interpreter(reporter, blockIdToBindings);
         interpreter.interpret(statements);
     }
 }

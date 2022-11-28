@@ -5,6 +5,18 @@ import java.util.List;
 
 public abstract class Stmt {
 
+    private static long currentId = 0;
+
+    private final Id id;
+
+    public Stmt() {
+        this.id = Id.get(currentId++);
+    }
+
+    public Id getId() {
+        return this.id;
+    }
+
     abstract <R> R accept(Visitor<R> visitor);
 
     interface Visitor<R> {

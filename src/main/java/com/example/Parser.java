@@ -91,10 +91,10 @@ public class Parser {
 
         Expr initializer = null;
         if (match(TokenType.EQUAL)) {
-            advance();
+            consume(TokenType.EQUAL);
             initializer = expression();
         }
-        advance();
+        consume(TokenType.SEMICOLON);
         return new Stmt.Var(name, initializer);
     }
 
@@ -263,7 +263,8 @@ public class Parser {
     }
 
     private Token advance() {
-        return this.tokens.get(current++);
+        Token advanced = this.tokens.get(current++);
+        return advanced;
     }
 
     private Boolean match(TokenType... types) {
