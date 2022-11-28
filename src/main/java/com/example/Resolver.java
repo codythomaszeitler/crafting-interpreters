@@ -94,8 +94,11 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     @Override
     public Object visitVariableExpr(Variable expr) {
         Integer binding = findBindingIfExists(expr.name.lexeme);
+        // Well you're in the global  variable space at this point. 
         StaticResolutionBlock block = getCurrentBindingBlock();
-        block.putDistance(expr.getId(), binding);
+        if (block != null) {
+            block.putDistance(expr.getId(), binding);
+        }
         return null;
     }
 
@@ -103,12 +106,15 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     public Object visitVariableAssign(Assign expr) {
         Integer binding = findBindingIfExists(expr.name.lexeme);
         StaticResolutionBlock block = getCurrentBindingBlock();
-        block.putDistance(expr.getId(), binding);
+        if (block != null) {
+            block.putDistance(expr.getId(), binding);
+        }
         return null;
     }
 
     @Override
     public Object visitFunctionExpression(Func expr) {
+        // I guess you still need to resolve the? 
         return null;
     }
 
@@ -168,8 +174,13 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     private StaticResolutionBlock getCurrentBindingBlock() {
         int lastElementIndex = this.blocks.size() - 1;
-        StmtIdWithDecls block = this.blocks.get(lastElementIndex);
-        return this.stmtIdToResolution.get(block.stmtId);
+
+        StaticResolutionBlock resolution = null;
+        if (lastElementIndex != -1) {
+            StmtIdWithDecls block = this.blocks.get(lastElementIndex);
+            resolution = this.stmtIdToResolution.get(block.stmtId);
+        } 
+        return resolution;
     }
 
     private Integer findBindingIfExists(String name) {

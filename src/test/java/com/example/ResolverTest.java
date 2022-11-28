@@ -22,6 +22,6 @@ public class ResolverTest {
         // Well is the stack really correct at this moment? 
         Map<Id, StaticResolutionBlock> stmtIdToBlock = testObject.parseStaticVariableBindings(ast);
 
-        assertEquals(3, stmtIdToBlock.size());
+        assertEquals(4, stmtIdToBlock.size());
     }
 }

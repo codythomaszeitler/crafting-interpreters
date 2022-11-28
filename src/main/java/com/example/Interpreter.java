@@ -128,9 +128,17 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     @Override
     public Object visitVariableExpr(Variable expr) {
         StaticResolutionBlock block = this.blockIdToBindings.get(this.currentBlockId);
-        Integer distance = block.getDistance(expr.getId());
-        Environment env = getParentEnv(distance);
-        return env.get(expr.name.lexeme);
+        if (block != null) {
+            Integer distance = block.getDistance(expr.getId());
+            if (distance == null) {
+                return this.environment.get(expr.name.lexeme);
+            }
+
+            Environment env = getParentEnv(distance);
+            return env.get(expr.name.lexeme);
+        } else {
+            return this.environment.get(expr.name.lexeme);
+        }
     }
 
     private Environment getParentEnv(Integer distance) {
@@ -157,9 +165,14 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     public Object visitVariableAssign(Assign expr) {
         Object value = evaluate(expr.rightHandSide);
         StaticResolutionBlock block = this.blockIdToBindings.get(this.currentBlockId);
-        Integer distance = block.getDistance(expr.getId());
-        Environment env = getParentEnv(distance);
-        env.assign(expr.name, value);
+
+        if (block != null) {
+            Integer distance = block.getDistance(expr.getId());
+            Environment env = getParentEnv(distance);
+            env.assign(expr.name, value);
+        } else {
+            this.environment.assign(expr.name, value);
+        }
         return null;
     }
 

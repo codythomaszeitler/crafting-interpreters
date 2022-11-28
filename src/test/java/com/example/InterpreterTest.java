@@ -4,6 +4,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.Test;
 
@@ -20,7 +21,10 @@ public class InterpreterTest {
 
         TestInterpreterReporter reporter = new TestInterpreterReporter();
 
-        Interpreter testObject = new Interpreter(reporter);
+        Resolver resolver = new Resolver();
+        Map<Id, StaticResolutionBlock> blockIdToResolution = resolver.parseStaticVariableBindings(statements);
+
+        Interpreter testObject = new Interpreter(reporter, blockIdToResolution);
         testObject.interpret(statements);
 
         return reporter;
