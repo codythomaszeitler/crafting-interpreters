@@ -156,7 +156,10 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     @Override
     public Object visitVariableAssign(Assign expr) {
         Object value = evaluate(expr.rightHandSide);
-        environment.assign(expr.name, value);
+        StaticResolutionBlock block = this.blockIdToBindings.get(this.currentBlockId);
+        Integer distance = block.getDistance(expr.getId());
+        Environment env = getParentEnv(distance);
+        env.assign(expr.name, value);
         return null;
     }
 

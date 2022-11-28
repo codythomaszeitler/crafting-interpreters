@@ -101,7 +101,9 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Object visitVariableAssign(Assign expr) {
-        // TODO Auto-generated method stub
+        Integer binding = findBindingIfExists(expr.name.lexeme);
+        StaticResolutionBlock block = getCurrentBindingBlock();
+        block.putDistance(expr.getId(), binding);
         return null;
     }
 
@@ -118,6 +120,8 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Void visitExpressionStatement(Expression statement) {
+        // Okay so we found this thing. 
+        resolve(statement.expression);
         return null;
     }
 
@@ -169,15 +173,17 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     }
 
     private Integer findBindingIfExists(String name) {
-        Integer binding = null;
-
-        for (int i = this.blocks.size() - 1; i >= 0; i--) {
-            StmtIdWithDecls block = this.blocks.get(i);
+        Integer numJumps = null;
+        for (int i = this.blocks.size(); i > 0; i--) {
+            StmtIdWithDecls block = this.blocks.get(i - 1);
             if (block.hasDecl(name)) {
-                binding = (this.blocks.size() - i);
+                // There has to be a plus one.
+                numJumps = (this.blocks.size() - i);
+                break;
             }
         }
-        return binding;
+        
+        return numJumps;
     }
 
     @Override
@@ -188,7 +194,9 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Void visitFunctionDeclStatement(FuncDecl statement) {
+        startScope(statement.getId());
         resolve(statement.block);
+        endScope();
         return null;
     }
 

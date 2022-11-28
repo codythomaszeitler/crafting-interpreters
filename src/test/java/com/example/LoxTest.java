@@ -35,6 +35,20 @@ public class LoxTest {
 
     @Test
     public void itShouldClosureInAddition() {
+        String source = "{var a = 10; var b = 10; {func add() {print a + b;}; var a = 3; var b = 3; add();}}";
+        testObject.execute(source);
+        assertTrue(this.reporter.hasPrintMessage("20.0"));
+    }
+
+    @Test
+    public void itShouldClosureChangesVariablesOutsideYourBlock() {
+        String source = "{var a = 10; var b = 10; {func add() {print a + b;}; a = 3; b = 3; add();}}";
+        testObject.execute(source);
+        assertTrue(this.reporter.hasPrintMessage("6.0"));
+    }
+
+    @Test
+    public void itShouldClosureOnUnaryOperation() {
         String source = "{var a = 10; var b = 10; {func add() {print a + b;}; add(); a = 3; b = 3;}}";
         testObject.execute(source);
         assertTrue(this.reporter.hasPrintMessage("20.0"));
