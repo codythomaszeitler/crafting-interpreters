@@ -68,7 +68,8 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Object visitBinaryExpression(Binary visitor) {
-        // TODO Auto-generated method stub
+        resolve(visitor.left);
+        resolve(visitor.right);
         return null;
     }
 
@@ -123,14 +124,22 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     @Override
     public Void visitVarDeclaration(Var statement) {
         String varName = statement.name.lexeme;
-        getCurrentDeclsBlock().addDecl(varName);
+        StmtIdWithDecls block = getCurrentDeclsBlock();
+        if (block != null) {
+            block.addDecl(varName);
+        }
         return null;
     }
 
     private StmtIdWithDecls getCurrentDeclsBlock() {
         int lastElementIndex = this.blocks.size() - 1;
-        StmtIdWithDecls block = this.blocks.get(lastElementIndex);
-        return block;
+        StmtIdWithDecls block = null;
+        if (lastElementIndex != -1) {
+            block = this.blocks.get(lastElementIndex);
+            return block;
+        } else {
+            return block;
+        }
     }
 
     @Override
