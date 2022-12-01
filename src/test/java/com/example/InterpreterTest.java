@@ -154,6 +154,7 @@ public class InterpreterTest {
 
     @Test
     public void itShouldPrintReturnValueFromFunction() {
+        // I think that issue here is that we are not binding to the function vars...
         String source = "func add(a, b) { return a + b; }; var b = add(2, 3); print b;";
         TestInterpreterReporter reporter = runInterpreterAgainst(source);
         assertTrue(reporter.hasMessage("5.0"));

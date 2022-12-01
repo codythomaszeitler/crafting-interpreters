@@ -114,7 +114,12 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Object visitFunctionExpression(Func expr) {
-        // I guess you still need to resolve the? 
+        StmtIdWithDecls block = getCurrentDeclsBlock();
+        if (block != null) {
+            for (Expr expression : expr.arguments) {
+                resolve(expression);
+            }
+        }
         return null;
     }
 
@@ -126,7 +131,6 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Void visitExpressionStatement(Expression statement) {
-        // Okay so we found this thing. 
         resolve(statement.expression);
         return null;
     }
@@ -199,13 +203,24 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Void visitIfStatement(If statement) {
-        // TODO Auto-generated method stub
+        resolve(statement.expression);
+        resolve(statement.block);
         return null;
     }
 
     @Override
     public Void visitFunctionDeclStatement(FuncDecl statement) {
         startScope(statement.getId());
+        // These function arguments can never be bound anywhere else right?
+        // They are just straight up variable declarations, right?
+
+        StmtIdWithDecls block = getCurrentDeclsBlock();
+        if (block != null) {
+            for (String decl : statement.arguments) {
+                block.addDecl(decl);
+            }
+        }
+
         resolve(statement.block);
         endScope();
         return null;
@@ -213,7 +228,7 @@ public class Resolver implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Void visitReturnStatement(Return statement) {
-        // TODO Auto-generated method stub
+        resolve(statement.expression);
         return null;
     }
 }

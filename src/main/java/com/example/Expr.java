@@ -5,12 +5,12 @@ import java.util.List;
 
 public abstract class Expr {
 
-    private static long currentId = 0;
+    private static long currentId = -1;
 
     private final Id id;
 
     public Expr() {
-        this.id = Id.get(currentId++);
+        this.id = Id.get(currentId--);
     }
 
     public Id getId() {

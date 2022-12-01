@@ -128,17 +128,23 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
     @Override
     public Object visitVariableExpr(Variable expr) {
         StaticResolutionBlock block = this.blockIdToBindings.get(this.currentBlockId);
+
+        Object value = null;
         if (block != null) {
             Integer distance = block.getDistance(expr.getId());
             if (distance == null) {
-                return this.environment.get(expr.name.lexeme);
+                value = getGlobalEnv().get(expr.name.lexeme);
+                return value;
             }
 
             Environment env = getParentEnv(distance);
-            return env.get(expr.name.lexeme);
+            value = env.get(expr.name.lexeme);
+            System.out.println(value);
         } else {
-            return this.environment.get(expr.name.lexeme);
+            value = this.environment.get(expr.name.lexeme);
+            System.out.println(value);
         }
+        return value;
     }
 
     private Environment getParentEnv(Integer distance) {
@@ -208,15 +214,24 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
 
     @Override
     public Object visitFunctionExpression(Func expr) {
-        Environment previous = this.environment;
-        this.environment = new Environment(previous);
-
-        Stmt.FuncDecl functionDeclaration = (Stmt.FuncDecl) previous.get(expr.name.lexeme);
+        Map<String, Object> argumentValues = new HashMap<>();
+        Stmt.FuncDecl functionDeclaration = (Stmt.FuncDecl) this.environment.get(expr.name.lexeme);
         for (int i = 0; i < functionDeclaration.arguments.size(); i++) {
             String name = functionDeclaration.arguments.get(i);
             Expr value = expr.arguments.get(i);
 
-            this.environment.define(name, evaluate(value));
+            argumentValues.put(name, evaluate(value));
+        }
+
+        Environment previous = this.environment;
+        this.environment = new Environment(previous);
+
+        Id previousBlockId = this.currentBlockId;
+        this.currentBlockId = functionDeclaration.getId();
+
+        for (String varName : argumentValues.keySet()) {
+            Object value = argumentValues.get(varName);
+            this.environment.define(varName, value);
         }
 
         try {
@@ -225,6 +240,7 @@ public class Interpreter implements Stmt.Visitor<Void>, Expr.Visitor<Object> {
             return e.value;
         } finally {
             this.environment = previous;
+            this.currentBlockId = previousBlockId;
         }
         return null;
     }
