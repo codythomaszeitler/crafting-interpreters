@@ -2,7 +2,7 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: gcc.exe build active file",
+            "label": "C/C++: gcc.exe build current test file",
             "command": "C:\\msys64\\mingw64\\bin\\gcc.exe",
             "args": [
                 "-Wall",
@@ -10,8 +10,9 @@
                 "-I",
                 "${workspaceFolder}\\clox\\unity\\src\\",
                 "-g",
-                "${workspaceFolder}\\clox\\chunk_test.c",
+                "${file}",
                 "${workspaceFolder}\\clox\\chunk.c",
+                "${workspaceFolder}\\clox\\memory.c",
                 "${workspaceFolder}\\clox\\unity\\src\\unity.c",
                 "-o",
                 "${fileDirname}\\main.exe"
