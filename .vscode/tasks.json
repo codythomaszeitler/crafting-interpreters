@@ -11,6 +11,7 @@
                 "${workspaceFolder}\\clox\\unity\\src\\",
                 "-g",
                 "${file}",
+                "${workspaceFolder}\\clox\\disassembler.c",
                 "${workspaceFolder}\\clox\\chunk.c",
                 "${workspaceFolder}\\clox\\memory.c",
                 "${workspaceFolder}\\clox\\value.c",

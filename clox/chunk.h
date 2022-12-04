@@ -3,6 +3,11 @@
 
 #include "value.h"
 
+typedef enum {
+    OP_RETURN,
+    OP_CONSTANT
+} OpCode;
+
 typedef struct Chunk {
     uint8_t* code;  
     int count;
