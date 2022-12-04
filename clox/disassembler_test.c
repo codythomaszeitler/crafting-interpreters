@@ -2,10 +2,11 @@
 #include "chunk.h"
 #include "stdint.h"
 #include "disassembler.h"
+#include <stdlib.h>
 
-const char* disassembler_test_messages[100];
+char* disassembler_test_messages[100];
 int disassembler_test_size;
-void testLogger(const char* message) {
+void testLogger(char* message) {
     disassembler_test_messages[disassembler_test_size] = message;
     disassembler_test_size = disassembler_test_size + 1;
 }
@@ -15,14 +16,16 @@ void setUp() {
 }
 
 void tearDown() {
-
+    for (int i = 0; i < disassembler_test_size; i++) {
+        free(disassembler_test_messages[i]);
+    }
 }
 
 void testItShouldBeAbleToCallbackToFunction() {
     Chunk bytecode;
     initChunk(&bytecode);
 
-    void (*toCall) (const char* message) = testLogger;
+    void (*toCall) (char* message) = testLogger;
 
     int constantIndex = addConstant(&bytecode, 5.0);
 

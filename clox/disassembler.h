@@ -3,6 +3,6 @@
 
 #include "chunk.h"
 
-void disassembleChunk(Chunk* bytecode, const char* chunkName, void (*callback)(const char* message));
+void disassembleChunk(Chunk* bytecode, const char* chunkName, void (*callback)(char* message));
 
 #endif
