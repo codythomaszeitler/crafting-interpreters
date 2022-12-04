@@ -2,11 +2,14 @@
 #include <stdint.h>
 #include "chunk.h"
 #include "memory.h"
+#include "value.h"
 
 void initChunk(Chunk* chunk) {
     chunk->count = 0;
     chunk->capacity = 0;
     chunk->code = NULL;
+
+    initValueArray(&chunk->constants);
 }
 
 void writeChunk(Chunk* chunk, uint8_t value) {
@@ -22,4 +25,13 @@ void writeChunk(Chunk* chunk, uint8_t value) {
 void freeChunk(Chunk* chunk) {
     FREE_ARRAY(uint8_t, chunk->code, chunk->count);
     initChunk(chunk);
+}
+
+int addConstant(Chunk* chunk, Value constant) {
+    int index = writeValueArray(&chunk->constants, constant);
+    return index;
+}
+
+Value getConstantAt(Chunk* chunk, int index) {
+    return getValueAt(&chunk->constants, index);
 }

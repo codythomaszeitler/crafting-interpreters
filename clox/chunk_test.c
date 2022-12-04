@@ -48,9 +48,19 @@ void testAddByteToChunk() {
     TEST_ASSERT_EQUAL(NULL, testObject.code);
 }
 
+void testItShouldBeAbleToAddConstant() {
+    Chunk testObject;
+    initChunk(&testObject);
+
+    int index = addConstant(&testObject, 5.0);
+    TEST_ASSERT_EQUAL(0, index);
+    TEST_ASSERT_EQUAL(5.0, getConstantAt(&testObject, index));
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(testInitAndAddToChunk);
     RUN_TEST(testAddByteToChunk);
+    RUN_TEST(testItShouldBeAbleToAddConstant);
     return UNITY_END();
 }

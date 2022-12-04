@@ -13,6 +13,7 @@
                 "${file}",
                 "${workspaceFolder}\\clox\\chunk.c",
                 "${workspaceFolder}\\clox\\memory.c",
+                "${workspaceFolder}\\clox\\value.c",
                 "${workspaceFolder}\\clox\\unity\\src\\unity.c",
                 "-o",
                 "${fileDirname}\\main.exe"
