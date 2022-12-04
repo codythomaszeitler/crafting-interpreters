@@ -51,6 +51,16 @@ uint8_t disassembleInstruction(Chunk* bytecode, int index, void (*logger)(char* 
         logger(line);
 
         return 2;
+    } else if (opCode == OP_NEGATE) {
+        const char* opCodeAsString = "OP_NEGATE";
+        int length = snprintf(NULL, 0, "%04d %s\n", index, opCodeAsString);
+
+        char *line = malloc(sizeof(char) * length);
+        snprintf(line, length + 1, "%04d %s\n", index, opCodeAsString);
+
+        logger(line);
+
+        return 1;
     }
 
     return -1;
