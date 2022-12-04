@@ -44,8 +44,29 @@ void testItShouldBeAbleToCallbackToFunction() {
     TEST_ASSERT_EQUAL_STRING("0003 OP_NEGATE\n", disassembler_test_messages[3]);
 }
 
+void testItShouldChewThroughNonOpCodes() {
+    Chunk testObject;
+    initChunk(&testObject);
+
+    void (*toCall) (char* message) = logWhenDisassemble;
+    writeChunk(&testObject, -1);
+    writeChunk(&testObject, -2);
+    writeChunk(&testObject, -3);
+    writeChunk(&testObject, OP_RETURN);
+
+    disassembleChunk(&testObject, "test chunk", toCall);
+
+    TEST_ASSERT_EQUAL(5, disassembler_test_size);
+    TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", disassembler_test_messages[0]);
+    TEST_ASSERT_EQUAL_STRING("0000 BAD_OP_CODE 255\n", disassembler_test_messages[1]);
+    TEST_ASSERT_EQUAL_STRING("0001 BAD_OP_CODE 254\n", disassembler_test_messages[2]);
+    TEST_ASSERT_EQUAL_STRING("0002 BAD_OP_CODE 253\n", disassembler_test_messages[3]);
+    TEST_ASSERT_EQUAL_STRING("0003 OP_RETURN\n", disassembler_test_messages[4]);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(testItShouldBeAbleToCallbackToFunction);
+    RUN_TEST(testItShouldChewThroughNonOpCodes);
     return UNITY_END();
 }

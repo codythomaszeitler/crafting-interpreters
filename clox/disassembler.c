@@ -61,7 +61,13 @@ uint8_t disassembleInstruction(Chunk* bytecode, int index, void (*logger)(char* 
         logger(line);
 
         return 1;
-    }
+    } else {
+        const char* opCodeAsString = "BAD_OP_CODE";
+        int length = snprintf(NULL, 0, "%04d %s %i\n", index, opCodeAsString, opCode);
+        char* line = malloc(sizeof(char) * length);
+        snprintf(line, length + 1, "%04d %s %i\n", index, opCodeAsString, opCode);
 
-    return -1;
+        logger(line);
+        return 1;
+    }
 }
