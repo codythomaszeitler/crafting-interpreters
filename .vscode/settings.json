@@ -1,7 +1,8 @@
 {
     "files.associations": {
         "chunk.h": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "memory.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }
