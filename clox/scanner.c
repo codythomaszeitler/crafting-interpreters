@@ -14,24 +14,14 @@ typedef struct Lexer
     const char *sourceCode;
 } Lexer;
 
-void scanner_initLexer(Lexer *lexer, const char *sourceCode)
+static void initLexer(Lexer *lexer, const char *sourceCode)
 {
     lexer->current = 0;
     lexer->iterator = 0;
     lexer->sourceCode = sourceCode;
 }
 
-Token *scanner_heapToken(Token token)
-{
-    Token *onHeap = malloc(sizeof(token));
-    onHeap->lexeme = token.lexeme;
-    onHeap->location.start = token.location.start;
-    onHeap->location.end = token.location.end;
-    onHeap->type = token.type;
-    return onHeap;
-}
-
-void scanner_writeToken(TokenArray *tokenArray, Token token)
+static void writeToken(TokenArray *tokenArray, Token token)
 {
     if (tokenArray->capacity < tokenArray->count + 1)
     {
@@ -44,80 +34,80 @@ void scanner_writeToken(TokenArray *tokenArray, Token token)
     tokenArray->count = tokenArray->count + 1;
 }
 
-void scanner_initTokenArray(TokenArray *);
-bool scanner_hasNext(Lexer *lexer);
-char scanner_peek(Lexer *lexer);
-char scanner_pop(Lexer *lexer);
-void scanner_identifierOrKeyword(Lexer *, TokenArray *);
-void scanner_semicolon(Lexer *, TokenArray *);
-void scanner_chewUpWhitespace(Lexer *);
-void scanner_add(Lexer *, TokenArray *);
-void scanner_digit(Lexer *, TokenArray *);
+static void initTokenArray(TokenArray *);
+static bool hasNext(Lexer *lexer);
+static char peek(Lexer *lexer);
+static char pop(Lexer *lexer);
+static void identifierOrKeyword(Lexer *, TokenArray *);
+static void semicolon(Lexer *, TokenArray *);
+static void chewUpWhitespace(Lexer *);
+static void add(Lexer *, TokenArray *);
+static void digit(Lexer *, TokenArray *);
 
 TokenArray parseTokens(const char *sourceCode)
 {
     TokenArray tokenArray;
-    scanner_initTokenArray(&tokenArray);
+    initTokenArray(&tokenArray);
 
     Lexer lexer;
-    scanner_initLexer(&lexer, sourceCode);
+    initLexer(&lexer, sourceCode);
 
-    while (scanner_hasNext(&lexer))
+    while (hasNext(&lexer))
     {
-        scanner_chewUpWhitespace(&lexer);
+        chewUpWhitespace(&lexer);
 
-        char current = scanner_peek(&lexer);
+        char current = peek(&lexer);
         if (isalpha(current))
         {
-            scanner_identifierOrKeyword(&lexer, &tokenArray);
+            identifierOrKeyword(&lexer, &tokenArray);
         }
         else if (current == ';')
         {
-            scanner_semicolon(&lexer, &tokenArray);
+            semicolon(&lexer, &tokenArray);
         }
         else if (isdigit(current))
         {
-            scanner_digit(&lexer, &tokenArray);
+            digit(&lexer, &tokenArray);
         }
         else if (current == '+')
         {
-            scanner_add(&lexer, &tokenArray);
+            add(&lexer, &tokenArray);
         }
         else
         {
             printf("%c was not supported by parse tokens\n", current);
-            scanner_pop(&lexer);
+            pop(&lexer);
         }
     }
 
     return tokenArray;
 }
 
-void scanner_initTokenArray(TokenArray *tokenArray)
+static void initTokenArray(TokenArray *tokenArray)
 {
     tokenArray->capacity = 0;
     tokenArray->count = 0;
     tokenArray->tokens = NULL;
 }
 
-bool scanner_hasNext(Lexer *lexer)
+static bool hasNext(Lexer *lexer)
 {
-    return scanner_peek(lexer) != '\0';
+    return peek(lexer) != '\0';
 }
 
-char scanner_peek(Lexer *lexer)
+static char peek(Lexer *lexer)
 {
     return lexer->sourceCode[lexer->current];
 }
 
-char scanner_pop(Lexer *lexer)
+static char pop(Lexer *lexer)
 {
     char popped = lexer->sourceCode[lexer->current];
     lexer->current = lexer->current + 1;
     return popped;
 }
 
-char *scanner_substring(Lexer *lexer, int start, int end)
+static char *substring(Lexer *lexer, int start, int end)
 {
     char *lexeme = malloc(end - start + 1);
 
@@ -129,16 +119,16 @@ char *scanner_substring(Lexer *lexer, int start, int end)
     return lexeme;
 }
 
-void scanner_identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
+static void identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
 {
     int start = lexer->current;
-    while (isalnum(scanner_peek(lexer)))
+    while (isalnum(peek(lexer)))
     {
-        scanner_pop(lexer);
+        pop(lexer);
     }
     int end = lexer->current;
 
-    char *lexeme = scanner_substring(lexer, start, end);
+    char *lexeme = substring(lexer, start, end);
     int lexemeLength = strlen(lexeme);
 
     TokenType type = -1;
@@ -162,28 +152,23 @@ void scanner_identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
     token.location.line = -1;
     token.type = type;
 
-    scanner_writeToken(tokenArray, token);
+    writeToken(tokenArray, token);
 }
 
-bool scanner_isAlphaNum(char toCheck)
+static void chewUpWhitespace(Lexer *lexer)
 {
-    return isalnum(toCheck);
-}
-
-void scanner_chewUpWhitespace(Lexer *lexer)
-{
-    while (isspace(scanner_peek(lexer)))
+    while (isspace(peek(lexer)))
     {
-        scanner_pop(lexer);
+        pop(lexer);
     }
 }
 
-Token scanner_consumerSingleCharacter(Lexer *lexer, TokenType type) {
+static Token consumerSingleCharacter(Lexer *lexer, TokenType type) {
     int start = lexer->current;
-    scanner_pop(lexer);
+    pop(lexer);
     int end = lexer->current;
 
-    char *lexeme = scanner_substring(lexer, start, end);
+    char *lexeme = substring(lexer, start, end);
 
     Token token;
     token.lexeme = lexeme;
@@ -193,17 +178,17 @@ Token scanner_consumerSingleCharacter(Lexer *lexer, TokenType type) {
     return token;
 }
 
-void scanner_semicolon(Lexer *lexer, TokenArray *tokenArray)
+static void semicolon(Lexer *lexer, TokenArray *tokenArray)
 {
-    scanner_writeToken(tokenArray, scanner_consumerSingleCharacter(lexer, TOKEN_SEMICOLON));
+    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_SEMICOLON));
 }
 
-void scanner_add(Lexer *lexer, TokenArray *tokenArray)
+static void add(Lexer *lexer, TokenArray *tokenArray)
 {
-    scanner_writeToken(tokenArray, scanner_consumerSingleCharacter(lexer, TOKEN_PLUS));
+    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_PLUS));
 }
 
-void scanner_digit(Lexer *lexer, TokenArray *tokenArray)
+static void digit(Lexer *lexer, TokenArray *tokenArray)
 {
-    scanner_writeToken(tokenArray, scanner_consumerSingleCharacter(lexer, TOKEN_NUMBER));
+    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_NUMBER));
 }

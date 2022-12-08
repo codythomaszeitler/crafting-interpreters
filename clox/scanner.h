@@ -69,6 +69,5 @@ typedef struct TokenArray
 } TokenArray;
 
 TokenArray parseTokens(const char *);
-void writeToken(TokenArray *, Token);
 
 #endif
