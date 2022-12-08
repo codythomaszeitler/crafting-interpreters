@@ -42,6 +42,9 @@ static void identifierOrKeyword(Lexer *, TokenArray *);
 static void semicolon(Lexer *, TokenArray *);
 static void chewUpWhitespace(Lexer *);
 static void add(Lexer *, TokenArray *);
+static void mult(Lexer *, TokenArray *);
+static void minus(Lexer *, TokenArray *);
+static void slash(Lexer *, TokenArray *);
 static void digit(Lexer *, TokenArray *);
 
 TokenArray parseTokens(const char *sourceCode)
@@ -72,6 +75,18 @@ TokenArray parseTokens(const char *sourceCode)
         else if (current == '+')
         {
             add(&lexer, &tokenArray);
+        }
+        else if (current == '*')
+        {
+            mult(&lexer, &tokenArray);
+        }
+        else if (current == '-')
+        {
+            minus(&lexer, &tokenArray);
+        }
+        else if (current == '/')
+        {
+            slash(&lexer, &tokenArray);
         }
         else
         {
@@ -163,7 +178,8 @@ static void chewUpWhitespace(Lexer *lexer)
     }
 }
 
-static Token consumerSingleCharacter(Lexer *lexer, TokenType type) {
+static Token consumerSingleCharacter(Lexer *lexer, TokenType type)
+{
     int start = lexer->current;
     pop(lexer);
     int end = lexer->current;
@@ -188,7 +204,47 @@ static void add(Lexer *lexer, TokenArray *tokenArray)
     writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_PLUS));
 }
 
+static void mult(Lexer *lexer, TokenArray *tokenArray)
+{
+    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_STAR));
+}
+
+static void minus(Lexer *lexer, TokenArray *tokenArray)
+{
+    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_MINUS));
+}
+
+static void slash(Lexer *lexer, TokenArray *tokenArray)
+{
+    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_SLASH));
+}
+
 static void digit(Lexer *lexer, TokenArray *tokenArray)
 {
     writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_NUMBER));
+}
+
+TokenArrayIterator tokensIterator(TokenArray array)
+{
+    TokenArrayIterator iterator;
+    iterator.array = array;
+    iterator.current = 0;
+    return iterator;
+}
+
+Token peekAtToken(TokenArrayIterator *iterator)
+{
+    return iterator->array.tokens[iterator->current];
+}
+
+Token popToken(TokenArrayIterator *iterator)
+{
+    Token popped = iterator->array.tokens[iterator->current];
+    iterator->current++;
+    return popped;
+}
+
+bool hasNextToken(TokenArrayIterator *iterator)
+{
+    return iterator->current < iterator->array.count;
 }

@@ -35,3 +35,15 @@ int addConstant(Chunk* chunk, Value constant) {
 Value getConstantAt(Chunk* chunk, int index) {
     return getValueAt(&chunk->constants, index);
 }
+
+
+uint8_t getByteLengthFor(OpCode opCode) {
+    uint8_t byteLength = 0;
+    if (opCode == OP_MULT || opCode == OP_ADD || opCode == OP_DIV || opCode == OP_SUB) {
+        byteLength = 1;
+    } else if (opCode == OP_CONSTANT) {
+        byteLength = 2;
+    }
+
+    return byteLength;
+}

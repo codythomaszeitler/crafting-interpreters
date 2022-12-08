@@ -41,6 +41,32 @@ void testItShouldParseAddition()
 
     TEST_ASSERT_EQUAL_STRING(";", tokenArray.tokens[4].lexeme);
     TEST_ASSERT_EQUAL(TOKEN_SEMICOLON, tokenArray.tokens[4].type);
+
+    TokenArrayIterator iterator = tokensIterator(tokenArray);
+    Token printToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("print", printToken.lexeme);
+    TEST_ASSERT_EQUAL(1, iterator.current);
+
+    TEST_ASSERT_TRUE(hasNextToken(&iterator));
+    Token numberOneToken = peekAtToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("1", numberOneToken.lexeme);
+    TEST_ASSERT_TRUE(hasNextToken(&iterator));
+
+    Token poppedNumberOneToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("1", poppedNumberOneToken.lexeme);
+    TEST_ASSERT_TRUE(hasNextToken(&iterator));
+
+    Token addToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("+", addToken.lexeme);
+    TEST_ASSERT_TRUE(hasNextToken(&iterator));
+
+    Token numberTwoToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("2", numberTwoToken.lexeme);
+    TEST_ASSERT_TRUE(hasNextToken(&iterator));
+
+    Token semicolon = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING(";", semicolon.lexeme);
+    TEST_ASSERT_FALSE(hasNextToken(&iterator));
 }
 
 int main(void)
