@@ -7,8 +7,14 @@ typedef enum {
     OP_RETURN,
     OP_CONSTANT, 
     OP_NEGATE,
-    OP_ADD
+    OP_ADD, 
+    OP_MULT,
+    OP_DIV,
+    OP_SUB,
+    OP_STACK_PEEK
 } OpCode;
+
+uint8_t getByteLengthFor(OpCode opCode);
 
 typedef struct Chunk {
     uint8_t* code;  

@@ -1,6 +1,7 @@
 #ifndef SCANNER_HEADER
 #define SCANNER_HEADER
 #include <stdint.h>
+#include <stdbool.h>
 
 typedef enum
 {
@@ -69,5 +70,15 @@ typedef struct TokenArray
 } TokenArray;
 
 TokenArray parseTokens(const char *);
+typedef struct TokenArrayIterator {
+    TokenArray array;
+    uint32_t current;
+} TokenArrayIterator;
+
+TokenArrayIterator tokensIterator(TokenArray array);
+Token peekAtToken(TokenArrayIterator* iterator);
+Token popToken(TokenArrayIterator* iterator);
+bool hasNextToken(TokenArrayIterator* iterator);
+
 
 #endif
