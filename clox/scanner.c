@@ -155,6 +155,12 @@ static void identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
         }
     }
 
+    if (lexemeLength == 4) {
+        if (!strcasecmp("true", lexeme)) {
+            type = TOKEN_TRUE;
+        }
+    }
+
     if (type == -1)
     {
         type = TOKEN_IDENTIFIER;

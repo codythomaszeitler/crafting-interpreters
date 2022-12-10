@@ -11,6 +11,7 @@ typedef enum {
     OP_MULT,
     OP_DIV,
     OP_SUB,
+    OP_TRUE,
     OP_STACK_PEEK
 } OpCode;
 

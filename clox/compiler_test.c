@@ -4,6 +4,8 @@
 #include "chunk.h"
 #include "disassembler.h"
 #include "vm.h"
+#include <stdbool.h>
+#include "value.h"
 
 Interpreter testObject;
 
@@ -205,7 +207,7 @@ void testItShouldRunBasicAddition()
     runInterpreter(&testObject, sourceCode);
 
     Value calculated = peek(&testObject.vm);
-    TEST_ASSERT_EQUAL(8, calculated);
+    TEST_ASSERT_EQUAL(8, unwrapNumber(calculated));
 }
 
 void testItShouldDoComplexAdditionAndMultiplication()
@@ -218,20 +220,24 @@ void testItShouldDoComplexAdditionAndMultiplication()
     runInterpreter(&testObject, sourceCode);
 
     Value calculated = peek(&testObject.vm);
-    TEST_ASSERT_EQUAL(64, calculated);
+    TEST_ASSERT_EQUAL(64, unwrapNumber(calculated));
 }
 
 void testItShouldDoComplexAdditionAndMultiplicationAndDivision()
 {
     const char *sourceCode = "5 + 3 * 5 + 4 + 5 * 8 / 4";
-
-    Interpreter testObject;
-    initInterpreter(&testObject);
-
     runInterpreter(&testObject, sourceCode);
 
     Value calculated = peek(&testObject.vm);
-    TEST_ASSERT_EQUAL(34, calculated);
+    TEST_ASSERT_EQUAL(34, unwrapNumber(calculated));
+}
+
+void testItShouldPopTrueOntoTopOfStack() {
+    const char* sourceCode = "true";
+    runInterpreter(&testObject, sourceCode);
+    Value shouldBeTrue = peek(&testObject.vm);
+    bool boolean = asBool(shouldBeTrue);
+    TEST_ASSERT_TRUE(boolean);
 }
 
 int main(void)
@@ -249,5 +255,6 @@ int main(void)
     RUN_TEST(testItShouldRunBasicAddition);
     RUN_TEST(testItShouldDoComplexAdditionAndMultiplication);
     RUN_TEST(testItShouldDoComplexAdditionAndMultiplicationAndDivision);
+    // RUN_TEST(testItShouldPopTrueOntoTopOfStack);
     return UNITY_END();
 }

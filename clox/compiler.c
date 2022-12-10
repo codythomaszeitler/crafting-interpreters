@@ -22,6 +22,7 @@ typedef struct ParseRule
 static void number(Parser *);
 static void binary(Parser *);
 static void unary(Parser *);
+static void literal(Parser *);
 static void expression(Parser *);
 static void parseExpression(Precedence, Parser *);
 
@@ -29,6 +30,7 @@ ParseRule rules[] = {
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
     [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
     [TOKEN_MINUS] = {unary, binary, PREC_UNARY},
+    [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR}};
 
@@ -41,11 +43,21 @@ static void number(Parser *parser)
 {
     Token shouldBeNumber = popToken(parser->tokens);
 
-    Value value = strtod(shouldBeNumber.lexeme, NULL);
+    double number = strtod(shouldBeNumber.lexeme, NULL);
+    Value value = wrapNumber(number);
 
     int valueConstantIndex = addConstant(parser->compiling, value);
     writeChunk(parser->compiling, OP_CONSTANT);
     writeChunk(parser->compiling, valueConstantIndex);
+}
+
+static void literal(Parser *parser)
+{
+    Token shouldBeTrue = popToken(parser->tokens);
+
+    if (shouldBeTrue.type == TOKEN_TRUE) {
+        writeChunk(parser->compiling, OP_TRUE);
+    }
 }
 
 static void binary(Parser *parser)
@@ -90,7 +102,6 @@ void initInterpreter(Interpreter *interpreter)
 
 void freeInterpreter(Interpreter *interpreter)
 {
-
 }
 
 void runInterpreter(Interpreter *interpreter, const char *sourceCode)
