@@ -39,11 +39,11 @@ Value getConstantAt(Chunk* chunk, int index) {
 
 uint8_t getByteLengthFor(OpCode opCode) {
     uint8_t byteLength = 0;
-    if (opCode == OP_MULT || opCode == OP_ADD || opCode == OP_DIV || opCode == OP_SUB) {
+    if (opCode == OP_MULT || opCode == OP_ADD || opCode == OP_DIV || opCode == OP_SUB || opCode == OP_TRUE || opCode == OP_FALSE || opCode == OP_EQUAL) {
         byteLength = 1;
     } else if (opCode == OP_CONSTANT) {
         byteLength = 2;
-    }
+    } 
 
     return byteLength;
 }

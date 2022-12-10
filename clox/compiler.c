@@ -3,6 +3,7 @@
 #include "scanner.h"
 #include "vm.h"
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct Parser
 {
@@ -31,7 +32,10 @@ ParseRule rules[] = {
     [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
     [TOKEN_MINUS] = {unary, binary, PREC_UNARY},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
+    [TOKEN_BANG_EQUAL] = {NULL, binary, PREC_EQUALITY},
+    [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
+    [TOKEN_STRING] = {literal, NULL, PREC_FACTOR},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR}};
 
 static ParseRule *getRule(TokenType tokenType)
@@ -55,8 +59,27 @@ static void literal(Parser *parser)
 {
     Token shouldBeTrue = popToken(parser->tokens);
 
-    if (shouldBeTrue.type == TOKEN_TRUE) {
+    if (shouldBeTrue.type == TOKEN_TRUE)
+    {
         writeChunk(parser->compiling, OP_TRUE);
+    }
+    else if (shouldBeTrue.type == TOKEN_FALSE)
+    {
+        writeChunk(parser->compiling, OP_FALSE);
+    }
+    else if (shouldBeTrue.type == TOKEN_STRING)
+    {
+        writeChunk(parser->compiling, OP_STRING);
+
+        const char *chars = shouldBeTrue.lexeme;
+        int length = strlen(chars);
+
+        for (int i = 0; i < length; i++)
+        {
+            char character = chars[i];
+            writeChunk(parser->compiling, character);
+        }
+        writeChunk(parser->compiling, '\0');
     }
 }
 
@@ -82,6 +105,11 @@ static void binary(Parser *parser)
     else if (operator.type == TOKEN_SLASH)
     {
         writeChunk(parser->compiling, OP_DIV);
+    }
+    else if (operator.type == TOKEN_BANG_EQUAL)
+    {
+        writeChunk(parser->compiling, OP_EQUAL);
+        writeChunk(parser->compiling, OP_NEGATE);
     }
 }
 

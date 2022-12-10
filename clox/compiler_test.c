@@ -6,6 +6,7 @@
 #include "vm.h"
 #include <stdbool.h>
 #include "value.h"
+#include "cloxstring.h"
 
 Interpreter testObject;
 
@@ -232,12 +233,52 @@ void testItShouldDoComplexAdditionAndMultiplicationAndDivision()
     TEST_ASSERT_EQUAL(34, unwrapNumber(calculated));
 }
 
-void testItShouldPopTrueOntoTopOfStack() {
-    const char* sourceCode = "true";
+void testItShouldPopTrueOntoTopOfStack()
+{
+    const char *sourceCode = "true";
     runInterpreter(&testObject, sourceCode);
     Value shouldBeTrue = peek(&testObject.vm);
-    bool boolean = asBool(shouldBeTrue);
+    bool boolean = unwrapBool(shouldBeTrue);
     TEST_ASSERT_TRUE(boolean);
+}
+
+void testItShouldPopFalseOntoTopOfStack()
+{
+    const char *sourceCode = "false";
+    runInterpreter(&testObject, sourceCode);
+    Value shouldBeTrue = peek(&testObject.vm);
+    bool boolean = unwrapBool(shouldBeTrue);
+    TEST_ASSERT_FALSE(boolean);
+}
+
+void testItShouldDoEqualityBetweenTrueAndFalse()
+{
+    const char *sourceCode = "false != true";
+    runInterpreter(&testObject, sourceCode);
+    Value shouldBeTrue = peek(&testObject.vm);
+    bool boolean = unwrapBool(shouldBeTrue);
+    TEST_ASSERT_TRUE(boolean);
+}
+
+void testItShouldPutStringOntoStack()
+{
+    const char *sourceCode = "\"cody is cool\"";
+    runInterpreter(&testObject, sourceCode);
+
+    Value heapStringPointer = peek(&testObject.vm);
+    StringObj *stringObj = (StringObj *)unwrapObject(heapStringPointer);
+
+    TEST_ASSERT_EQUAL_STRING(stringObj->chars, "cody is cool");
+}
+
+void testItShouldConcatStrings()
+{
+    const char *sourceCode = "\"a\" + \"b\"";
+    runInterpreter(&testObject, sourceCode);
+
+    Value heapStringPointer = peek(&testObject.vm);
+    StringObj* stringObj = (StringObj*) unwrapObject(heapStringPointer);
+    TEST_ASSERT_EQUAL_STRING("ab", stringObj->chars);
 }
 
 int main(void)
@@ -255,6 +296,10 @@ int main(void)
     RUN_TEST(testItShouldRunBasicAddition);
     RUN_TEST(testItShouldDoComplexAdditionAndMultiplication);
     RUN_TEST(testItShouldDoComplexAdditionAndMultiplicationAndDivision);
-    // RUN_TEST(testItShouldPopTrueOntoTopOfStack);
+    RUN_TEST(testItShouldPopTrueOntoTopOfStack);
+    RUN_TEST(testItShouldPopFalseOntoTopOfStack);
+    RUN_TEST(testItShouldDoEqualityBetweenTrueAndFalse);
+    RUN_TEST(testItShouldPutStringOntoStack);
+    RUN_TEST(testItShouldConcatStrings);
     return UNITY_END();
 }

@@ -2,7 +2,9 @@
     "files.associations": {
         "chunk.h": "c",
         "type_traits": "c",
-        "memory.h": "c"
+        "memory.h": "c",
+        "cloxstring.h": "c",
+        "object.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

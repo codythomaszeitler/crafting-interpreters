@@ -1,6 +1,8 @@
 #include "unity.h"
 #include "value.h"
 #include <math.h>
+#include "cloxstring.h"
+#include <stdlib.h>
 
 ValueArray testObject;
 
@@ -41,10 +43,21 @@ void testItShouldBeAbleToGetNaNBackIfNoExists() {
     TEST_ASSERT_FALSE(unwrapNumber(value) == unwrapNumber(value));
 }
 
+void testItShouldBeAbleToCreateString()
+{
+    const char* testCharArray = "This is a test string";
+
+    StringObj* string = wrapString(testCharArray);
+    char* characters = string->chars;
+
+    TEST_ASSERT_EQUAL_STRING(characters, "This is a test string");
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(testItShouldBeAbleToAddAValueToAConstantPool);
     RUN_TEST(testItShouldBeAbleToGetValueAtExisting);
     RUN_TEST(testItShouldBeAbleToGetNaNBackIfNoExists);
+    RUN_TEST(testItShouldBeAbleToCreateString);
     return UNITY_END();
 }

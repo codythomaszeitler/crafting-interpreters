@@ -12,6 +12,9 @@ typedef enum {
     OP_DIV,
     OP_SUB,
     OP_TRUE,
+    OP_FALSE,
+    OP_EQUAL,
+    OP_STRING,
     OP_STACK_PEEK
 } OpCode;
 
