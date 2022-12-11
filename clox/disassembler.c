@@ -51,10 +51,10 @@ uint8_t disassembleInstruction(Chunk *bytecode, int index, void (*logger)(char *
         Value constant = getConstantAt(bytecode, indexConstant);
 
         const char *opCodeAsString = "OP_CONSTANT";
-        int length = snprintf(NULL, 0, "%04d %s %i %f\n", index, opCodeAsString, indexConstant, constant);
+        int length = snprintf(NULL, 0, "%04d %s %i %f\n", index, opCodeAsString, indexConstant, unwrapNumber(constant));
 
         char *line = malloc(sizeof(char) * length + 1);
-        snprintf(line, length + 1, "%04d %s %i %f\n", index, opCodeAsString, indexConstant, constant);
+        snprintf(line, length + 1, "%04d %s %i %f\n", index, opCodeAsString, indexConstant, unwrapNumber(constant));
 
         logger(line);
 

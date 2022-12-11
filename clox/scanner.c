@@ -45,6 +45,8 @@ static void add(Lexer *, TokenArray *);
 static void mult(Lexer *, TokenArray *);
 static void minus(Lexer *, TokenArray *);
 static void slash(Lexer *, TokenArray *);
+static void bangOrNotEqual(Lexer *, TokenArray *);
+static void string(Lexer *, TokenArray *);
 static void digit(Lexer *, TokenArray *);
 
 TokenArray parseTokens(const char *sourceCode)
@@ -87,6 +89,14 @@ TokenArray parseTokens(const char *sourceCode)
         else if (current == '/')
         {
             slash(&lexer, &tokenArray);
+        }
+        else if (current == '!')
+        {
+            bangOrNotEqual(&lexer, &tokenArray);
+        }
+        else if (current == '"')
+        {
+            string(&lexer, &tokenArray);
         }
         else
         {
@@ -153,6 +163,18 @@ static void identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
         {
             type = TOKEN_PRINT;
         }
+        if (!strcmp("false", lexeme))
+        {
+            type = TOKEN_FALSE;
+        }
+    }
+
+    if (lexemeLength == 4)
+    {
+        if (!strcasecmp("true", lexeme))
+        {
+            type = TOKEN_TRUE;
+        }
     }
 
     if (type == -1)
@@ -178,7 +200,7 @@ static void chewUpWhitespace(Lexer *lexer)
     }
 }
 
-static Token consumerSingleCharacter(Lexer *lexer, TokenType type)
+static Token consumeSingleCharacter(Lexer *lexer, TokenType type)
 {
     int start = lexer->current;
     pop(lexer);
@@ -196,32 +218,72 @@ static Token consumerSingleCharacter(Lexer *lexer, TokenType type)
 
 static void semicolon(Lexer *lexer, TokenArray *tokenArray)
 {
-    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_SEMICOLON));
+    writeToken(tokenArray, consumeSingleCharacter(lexer, TOKEN_SEMICOLON));
 }
 
 static void add(Lexer *lexer, TokenArray *tokenArray)
 {
-    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_PLUS));
+    writeToken(tokenArray, consumeSingleCharacter(lexer, TOKEN_PLUS));
 }
 
 static void mult(Lexer *lexer, TokenArray *tokenArray)
 {
-    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_STAR));
+    writeToken(tokenArray, consumeSingleCharacter(lexer, TOKEN_STAR));
 }
 
 static void minus(Lexer *lexer, TokenArray *tokenArray)
 {
-    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_MINUS));
+    writeToken(tokenArray, consumeSingleCharacter(lexer, TOKEN_MINUS));
 }
 
 static void slash(Lexer *lexer, TokenArray *tokenArray)
 {
-    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_SLASH));
+    writeToken(tokenArray, consumeSingleCharacter(lexer, TOKEN_SLASH));
+}
+
+static void bangOrNotEqual(Lexer *lexer, TokenArray *tokenArray)
+{
+    pop(lexer);
+    char maybeEquals = peek(lexer);
+
+    Token token;
+    if (maybeEquals == '=')
+    {
+        pop(lexer);
+        token.lexeme = "!=";
+        token.type = TOKEN_BANG_EQUAL;
+    }
+    else
+    {
+        token.lexeme = "!";
+        token.type = TOKEN_BANG;
+    }
+
+    writeToken(tokenArray, token);
 }
 
 static void digit(Lexer *lexer, TokenArray *tokenArray)
 {
-    writeToken(tokenArray, consumerSingleCharacter(lexer, TOKEN_NUMBER));
+    writeToken(tokenArray, consumeSingleCharacter(lexer, TOKEN_NUMBER));
+}
+
+static void string(Lexer *lexer, TokenArray *tokenArray)
+{
+    pop(lexer);
+    int start = lexer->current;
+    while (peek(lexer) != '"') {
+        pop(lexer);
+    }
+    int end = lexer->current;
+    pop(lexer);
+
+    Token token;
+    token.lexeme = substring(lexer, start, end);
+    token.type = TOKEN_STRING;
+    token.location.start = start - 1;
+    token.location.end = end + 1;
+
+    writeToken(tokenArray, token);
 }
 
 TokenArrayIterator tokensIterator(TokenArray array)

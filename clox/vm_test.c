@@ -15,7 +15,7 @@ void testItShouldBeAbleToAddConstantToVMStack()
     Chunk bytecode;
     initChunk(&bytecode);
 
-    int indexConstant = addConstant(&bytecode, 5.0);
+    int indexConstant = addConstant(&bytecode, wrapNumber(5.0));
     writeChunk(&bytecode, OP_CONSTANT);
     writeChunk(&bytecode, indexConstant);
 
@@ -26,7 +26,7 @@ void testItShouldBeAbleToAddConstantToVMStack()
     writeChunk(&bytecode, OP_ADD);
     interpret(&testObject, &bytecode);
     Value value = peek(&testObject);
-    TEST_ASSERT_EQUAL(0, value);
+    TEST_ASSERT_EQUAL(0, unwrapNumber(value));
 
     freeChunk(&bytecode);
 }
@@ -36,7 +36,7 @@ void testItShouldBeAbleToDoMultiplication()
     Chunk bytecode;
     initChunk(&bytecode);
 
-    int indexConstant = addConstant(&bytecode, 5.0);
+    int indexConstant = addConstant(&bytecode, wrapNumber(5.0));
     writeChunk(&bytecode, OP_CONSTANT);
     writeChunk(&bytecode, indexConstant);
 
@@ -46,7 +46,7 @@ void testItShouldBeAbleToDoMultiplication()
     writeChunk(&bytecode, OP_MULT);
     interpret(&testObject, &bytecode);
     Value value = peek(&testObject);
-    TEST_ASSERT_EQUAL(25.0, value);
+    TEST_ASSERT_EQUAL(25.0, unwrapNumber(value));
 
     freeChunk(&bytecode);
 }
@@ -56,8 +56,8 @@ void testItShouldBeAbleToDoDivision()
     Chunk bytecode;
     initChunk(&bytecode);
 
-    int twentyFiveIndex = addConstant(&bytecode, 25.0);
-    int fiveIndex = addConstant(&bytecode, 5.0);
+    int twentyFiveIndex = addConstant(&bytecode, wrapNumber(25.0));
+    int fiveIndex = addConstant(&bytecode, wrapNumber(5.0));
     writeChunk(&bytecode, OP_CONSTANT);
     writeChunk(&bytecode, twentyFiveIndex);
 
@@ -67,7 +67,7 @@ void testItShouldBeAbleToDoDivision()
     writeChunk(&bytecode, OP_DIV);
     interpret(&testObject, &bytecode);
     Value value = peek(&testObject);
-    TEST_ASSERT_EQUAL(5.0, value);
+    TEST_ASSERT_EQUAL(5.0, unwrapNumber(value));
 
     freeChunk(&bytecode);
 }
@@ -77,8 +77,8 @@ void testItShouldBeAbleToDoSubtraction()
     Chunk bytecode;
     initChunk(&bytecode);
 
-    int twentyFiveIndex = addConstant(&bytecode, 25.0);
-    int fiveIndex = addConstant(&bytecode, 5.0);
+    int twentyFiveIndex = addConstant(&bytecode, wrapNumber(25.0));
+    int fiveIndex = addConstant(&bytecode, wrapNumber(5.0));
     writeChunk(&bytecode, OP_CONSTANT);
     writeChunk(&bytecode, twentyFiveIndex);
 
@@ -88,7 +88,7 @@ void testItShouldBeAbleToDoSubtraction()
     writeChunk(&bytecode, OP_SUB);
     interpret(&testObject, &bytecode);
     Value value = peek(&testObject);
-    TEST_ASSERT_EQUAL(20.0, value);
+    TEST_ASSERT_EQUAL(20.0, unwrapNumber(value));
 
     freeChunk(&bytecode);
 }

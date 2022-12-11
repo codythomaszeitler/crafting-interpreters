@@ -2,6 +2,9 @@
 #include "value.h"
 #include "chunk.h"
 #include <stdint.h>
+#include "cloxstring.h"
+#include <stdlib.h>
+#include <string.h>
 
 void initVirtualMachine(VirtualMachine *vm)
 {
@@ -25,46 +28,85 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
         else if (opCode == OP_NEGATE)
         {
             Value value = pop(vm);
-            push(vm, (-1 * value));
+            push(vm, negate(value));
 
             iterator = iterator + 1;
         }
         else if (opCode == OP_ADD)
         {
-            Value right = pop(vm);
-            Value left = pop(vm);
+            Value rightValue = pop(vm);
+            Value leftValue = pop(vm);
 
-            Value result = left + right;
+            Value result = add(leftValue, rightValue);
             push(vm, result);
 
             iterator = iterator + getByteLengthFor(OP_ADD);
         }
         else if (opCode == OP_MULT)
         {
-            Value right = pop(vm);
-            Value left = pop(vm);
-            Value result = left * right;
+            Value rightValue = pop(vm);
+            Value leftValue = pop(vm);
+
+            double right = unwrapNumber(rightValue);
+            double left = unwrapNumber(leftValue);
+
+            Value result = wrapNumber(left * right);
             push(vm, result);
 
             iterator = iterator + getByteLengthFor(opCode);
         }
         else if (opCode == OP_DIV)
         {
-            Value right = pop(vm);
-            Value left = pop(vm);
-            Value result = left / right;
+            Value rightValue = pop(vm);
+            Value leftValue = pop(vm);
+
+            double right = unwrapNumber(rightValue);
+            double left = unwrapNumber(leftValue);
+            Value result = wrapNumber(left / right);
             push(vm, result);
 
             iterator = iterator + getByteLengthFor(opCode);
         }
         else if (opCode == OP_SUB)
         {
-            Value right = pop(vm);
-            Value left = pop(vm);
-            Value result = left - right;
+            Value rightValue = pop(vm);
+            Value leftValue = pop(vm);
+
+            double right = unwrapNumber(rightValue);
+            double left = unwrapNumber(leftValue);
+            Value result = wrapNumber(left - right);
             push(vm, result);
 
             iterator = iterator + getByteLengthFor(opCode);
+        }
+        else if (opCode == OP_TRUE)
+        {
+            Value boolean = wrapBool(true);
+            push(vm, boolean);
+            iterator = iterator + getByteLengthFor(opCode);
+        } 
+        else if (opCode == OP_FALSE) {
+            Value boolean = wrapBool(false);
+            push(vm, boolean);
+            iterator = iterator + getByteLengthFor(opCode);
+        }
+        else if (opCode == OP_EQUAL) {
+            Value right = pop(vm);
+            Value left = pop(vm);
+            Value result = wrapBool(equals(left, right));
+            push(vm, result);
+            iterator = iterator + getByteLengthFor(opCode);
+        }
+        else if (opCode == OP_STRING) {
+
+            char* chars = (char*) &bytecode->code[iterator + 1];
+
+            StringObj* stringObj = wrapString(chars);
+            Value reference = wrapObject((Obj*)stringObj);
+
+            push(vm, reference);
+
+            iterator = iterator + 1 + stringObj->length + 1;
         }
         else
         {

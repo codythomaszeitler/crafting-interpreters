@@ -30,7 +30,7 @@ void tearDown() {
 void testItShouldBeAbleToCallbackToFunction() {
     void (*toCall) (char* message) = logWhenDisassemble;
 
-    int constantIndex = addConstant(&bytecode, 5.0);
+    int constantIndex = addConstant(&bytecode, wrapNumber(5.0));
 
     writeChunk(&bytecode, OP_RETURN);
     writeChunk(&bytecode, OP_CONSTANT);

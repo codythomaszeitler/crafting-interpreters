@@ -4,6 +4,9 @@
 #include "chunk.h"
 #include "disassembler.h"
 #include "vm.h"
+#include <stdbool.h>
+#include "value.h"
+#include "cloxstring.h"
 
 Interpreter testObject;
 
@@ -205,7 +208,7 @@ void testItShouldRunBasicAddition()
     runInterpreter(&testObject, sourceCode);
 
     Value calculated = peek(&testObject.vm);
-    TEST_ASSERT_EQUAL(8, calculated);
+    TEST_ASSERT_EQUAL(8, unwrapNumber(calculated));
 }
 
 void testItShouldDoComplexAdditionAndMultiplication()
@@ -218,20 +221,64 @@ void testItShouldDoComplexAdditionAndMultiplication()
     runInterpreter(&testObject, sourceCode);
 
     Value calculated = peek(&testObject.vm);
-    TEST_ASSERT_EQUAL(64, calculated);
+    TEST_ASSERT_EQUAL(64, unwrapNumber(calculated));
 }
 
 void testItShouldDoComplexAdditionAndMultiplicationAndDivision()
 {
     const char *sourceCode = "5 + 3 * 5 + 4 + 5 * 8 / 4";
-
-    Interpreter testObject;
-    initInterpreter(&testObject);
-
     runInterpreter(&testObject, sourceCode);
 
     Value calculated = peek(&testObject.vm);
-    TEST_ASSERT_EQUAL(34, calculated);
+    TEST_ASSERT_EQUAL(34, unwrapNumber(calculated));
+}
+
+void testItShouldPopTrueOntoTopOfStack()
+{
+    const char *sourceCode = "true";
+    runInterpreter(&testObject, sourceCode);
+    Value shouldBeTrue = peek(&testObject.vm);
+    bool boolean = unwrapBool(shouldBeTrue);
+    TEST_ASSERT_TRUE(boolean);
+}
+
+void testItShouldPopFalseOntoTopOfStack()
+{
+    const char *sourceCode = "false";
+    runInterpreter(&testObject, sourceCode);
+    Value shouldBeTrue = peek(&testObject.vm);
+    bool boolean = unwrapBool(shouldBeTrue);
+    TEST_ASSERT_FALSE(boolean);
+}
+
+void testItShouldDoEqualityBetweenTrueAndFalse()
+{
+    const char *sourceCode = "false != true";
+    runInterpreter(&testObject, sourceCode);
+    Value shouldBeTrue = peek(&testObject.vm);
+    bool boolean = unwrapBool(shouldBeTrue);
+    TEST_ASSERT_TRUE(boolean);
+}
+
+void testItShouldPutStringOntoStack()
+{
+    const char *sourceCode = "\"cody is cool\"";
+    runInterpreter(&testObject, sourceCode);
+
+    Value heapStringPointer = peek(&testObject.vm);
+    StringObj *stringObj = (StringObj *)unwrapObject(heapStringPointer);
+
+    TEST_ASSERT_EQUAL_STRING(stringObj->chars, "cody is cool");
+}
+
+void testItShouldConcatStrings()
+{
+    const char *sourceCode = "\"a\" + \"b\"";
+    runInterpreter(&testObject, sourceCode);
+
+    Value heapStringPointer = peek(&testObject.vm);
+    StringObj* stringObj = (StringObj*) unwrapObject(heapStringPointer);
+    TEST_ASSERT_EQUAL_STRING("ab", stringObj->chars);
 }
 
 int main(void)
@@ -249,5 +296,10 @@ int main(void)
     RUN_TEST(testItShouldRunBasicAddition);
     RUN_TEST(testItShouldDoComplexAdditionAndMultiplication);
     RUN_TEST(testItShouldDoComplexAdditionAndMultiplicationAndDivision);
+    RUN_TEST(testItShouldPopTrueOntoTopOfStack);
+    RUN_TEST(testItShouldPopFalseOntoTopOfStack);
+    RUN_TEST(testItShouldDoEqualityBetweenTrueAndFalse);
+    RUN_TEST(testItShouldPutStringOntoStack);
+    RUN_TEST(testItShouldConcatStrings);
     return UNITY_END();
 }
