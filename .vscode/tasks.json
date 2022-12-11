@@ -20,6 +20,7 @@
                 "${workspaceFolder}\\clox\\value.c",
                 "${workspaceFolder}\\clox\\cloxstring.c",
                 "${workspaceFolder}\\clox\\object.c",
+                "${workspaceFolder}\\clox\\hashmap.c",
                 "${workspaceFolder}\\clox\\unity\\src\\unity.c",
                 "-o",
                 "${fileDirname}\\main.exe"

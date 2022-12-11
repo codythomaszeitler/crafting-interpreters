@@ -102,6 +102,16 @@ bool isObject(Value value)
     return value.type == VALUE_TYPE_OBJECT;
 }
 
+bool isNil(Value value) {
+    return value.type == VALUE_TYPE_NIL;
+}
+
+Value nil() {
+    Value nil;
+    nil.type = VALUE_TYPE_NIL;
+    return nil;
+}
+
 bool equals(Value left, Value right)
 {
     return left.raw.boolean == right.raw.boolean;

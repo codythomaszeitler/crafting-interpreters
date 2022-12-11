@@ -9,7 +9,8 @@
 typedef enum ValueType {
     VALUE_TYPE_BOOL,
     VALUE_TYPE_NUMBER,
-    VALUE_TYPE_OBJECT
+    VALUE_TYPE_OBJECT,
+    VALUE_TYPE_NIL
 } ValueType;
 
 typedef struct Value {
@@ -44,6 +45,9 @@ bool isNumber(Value);
 Value wrapObject(Obj* pointer);
 Obj* unwrapObject(Value);
 bool isObject(Value);
+
+bool isNil(Value);
+Value nil();
 
 bool equals(Value, Value);
 
