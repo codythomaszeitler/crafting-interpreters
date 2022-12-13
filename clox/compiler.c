@@ -4,6 +4,7 @@
 #include "vm.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 typedef struct Parser
 {
@@ -26,6 +27,7 @@ static void unary(Parser *);
 static void literal(Parser *);
 static void expression(Parser *);
 static void parseExpression(Precedence, Parser *);
+static bool isAtEndOfStatement(Parser *parser);
 
 ParseRule rules[] = {
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
@@ -36,6 +38,7 @@ ParseRule rules[] = {
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
     [TOKEN_STRING] = {literal, NULL, PREC_FACTOR},
+    [TOKEN_IDENTIFIER] = {literal, NULL, PREC_NONE},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR}};
 
 static ParseRule *getRule(TokenType tokenType)
@@ -70,16 +73,12 @@ static void literal(Parser *parser)
     else if (shouldBeTrue.type == TOKEN_STRING)
     {
         writeChunk(parser->compiling, OP_STRING);
-
-        const char *chars = shouldBeTrue.lexeme;
-        int length = strlen(chars);
-
-        for (int i = 0; i < length; i++)
-        {
-            char character = chars[i];
-            writeChunk(parser->compiling, character);
-        }
-        writeChunk(parser->compiling, '\0');
+        writeString(parser->compiling, (const char *)shouldBeTrue.lexeme);
+    }
+    else if (shouldBeTrue.type == TOKEN_IDENTIFIER)
+    {
+        writeChunk(parser->compiling, OP_VAR_EXPRESSION);
+        writeString(parser->compiling, (const char *)shouldBeTrue.lexeme);
     }
 }
 
@@ -138,7 +137,62 @@ void runInterpreter(Interpreter *interpreter, const char *sourceCode)
     initChunk(&bytecode);
 
     compile(&bytecode, sourceCode);
+
+    interpreter->vm.onStdOut = interpreter->onStdOut;
     interpret(&interpreter->vm, &bytecode);
+}
+
+static void printStatement(Parser *parser)
+{
+    popToken(parser->tokens);
+    expression(parser);
+    writeChunk(parser->compiling, OP_PRINT);
+    popToken(parser->tokens);
+}
+
+static void variableDecl(Parser *parser)
+{
+    popToken(parser->tokens);
+    Token identifier = popToken(parser->tokens);
+    // So this bytecode... would look like
+    // OP_VAR_DECL a;
+    writeChunk(parser->compiling, OP_VAR_DECL);
+    writeString(parser->compiling, (const char *)identifier.lexeme);
+    popToken(parser->tokens);
+}
+
+static void variableAssignment(Parser *parser)
+{
+    Token identifier = popToken(parser->tokens);
+    popToken(parser->tokens);
+
+    expression(parser);
+
+    writeChunk(parser->compiling, OP_VAR_ASSIGN);
+    writeString(parser->compiling, (const char *)identifier.lexeme);
+    popToken(parser->tokens);
+}
+
+static void statement(Parser *parser)
+{
+    Token peeked = peekAtToken(parser->tokens);
+
+    if (peeked.type == TOKEN_PRINT)
+    {
+        printStatement(parser);
+    }
+    else if (peeked.type == TOKEN_VAR)
+    {
+        variableDecl(parser);
+    }
+    else if (peeked.type == TOKEN_IDENTIFIER)
+    {
+        variableAssignment(parser);
+    }
+    else
+    {
+        expression(parser);
+    }
 }
 
 void compile(Chunk *chunk, const char *sourceCode)
@@ -150,7 +204,10 @@ void compile(Chunk *chunk, const char *sourceCode)
     parser.compiling = chunk;
     parser.tokens = &iterator;
 
-    expression(&parser);
+    while (hasNextToken(parser.tokens))
+    {
+        statement(&parser);
+    }
 }
 
 static void expression(Parser *parser)
@@ -167,10 +224,15 @@ static void parseExpression(Precedence precedence, Parser *parser)
 
     Token maybeInfixToken = peekAtToken(parser->tokens);
     ParseRule *infixParseRule = getRule(maybeInfixToken.type);
-    while (hasNextToken(parser->tokens) && precedence <= infixParseRule->Precedence)
+    while (hasNextToken(parser->tokens) && !isAtEndOfStatement(parser) && precedence <= infixParseRule->Precedence)
     {
         ParseFn infixFunction = getRule(maybeInfixToken.type)->infix;
         infixFunction(parser);
         maybeInfixToken = peekAtToken(parser->tokens);
     }
+}
+
+static bool isAtEndOfStatement(Parser *parser)
+{
+    return peekAtToken(parser->tokens).type == TOKEN_SEMICOLON;
 }
