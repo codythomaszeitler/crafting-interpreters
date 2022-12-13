@@ -5,10 +5,16 @@
 #include "cloxstring.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 void initVirtualMachine(VirtualMachine *vm)
 {
     vm->currentStackIndex = 0;
+    vm->onStdOut = NULL;
+
+    // How can our VM
+    // Our VM would be running in a certain context, right?
+    initHashMap(&vm->global);
 }
 
 void interpret(VirtualMachine *vm, Chunk *bytecode)
@@ -84,29 +90,66 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
             Value boolean = wrapBool(true);
             push(vm, boolean);
             iterator = iterator + getByteLengthFor(opCode);
-        } 
-        else if (opCode == OP_FALSE) {
+        }
+        else if (opCode == OP_FALSE)
+        {
             Value boolean = wrapBool(false);
             push(vm, boolean);
             iterator = iterator + getByteLengthFor(opCode);
         }
-        else if (opCode == OP_EQUAL) {
+        else if (opCode == OP_EQUAL)
+        {
             Value right = pop(vm);
             Value left = pop(vm);
             Value result = wrapBool(equals(left, right));
             push(vm, result);
             iterator = iterator + getByteLengthFor(opCode);
         }
-        else if (opCode == OP_STRING) {
+        else if (opCode == OP_STRING)
+        {
 
-            char* chars = (char*) &bytecode->code[iterator + 1];
+            char *chars = (char *)&bytecode->code[iterator + 1];
 
-            StringObj* stringObj = wrapString(chars);
-            Value reference = wrapObject((Obj*)stringObj);
+            StringObj *stringObj = wrapString(chars);
+            Value reference = wrapObject((Obj *)stringObj);
 
             push(vm, reference);
 
             iterator = iterator + 1 + stringObj->length + 1;
+        }
+        else if (opCode == OP_PRINT)
+        {
+            Value expression = pop(vm);
+            int length = snprintf(NULL, 0, "%f", unwrapNumber(expression));
+
+            char *line = malloc(sizeof(char) * length + 1);
+            snprintf(line, length + 1, "%f", unwrapNumber(expression));
+            line[length] = '\0';
+
+            vm->onStdOut(line);
+
+            iterator = iterator + 1;
+        }
+        else if (opCode == OP_VAR_DECL)
+        {
+            char *chars = (char *)&bytecode->code[iterator + 1];
+            hashMapPut(&vm->global, chars, nil());
+
+            iterator = iterator + strlen(chars) + 1 + 1;
+        }
+        else if (opCode == OP_VAR_ASSIGN) {
+            char *chars = (char*) &bytecode->code[iterator + 1];
+            Value value = pop(vm);
+            hashMapPut(&vm->global, chars, value);
+
+            iterator = iterator + strlen(chars) + 1 + 1;
+        }
+        else if (opCode == OP_VAR_EXPRESSION) {
+            char *chars = (char*) &bytecode->code[iterator + 1];
+            Value value = hashMapGet(&vm->global, chars);
+            push(vm, value);
+
+            iterator = iterator + strlen(chars) + 1 + 1;
         }
         else
         {

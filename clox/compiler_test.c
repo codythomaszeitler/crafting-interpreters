@@ -277,8 +277,58 @@ void testItShouldConcatStrings()
     runInterpreter(&testObject, sourceCode);
 
     Value heapStringPointer = peek(&testObject.vm);
-    StringObj* stringObj = (StringObj*) unwrapObject(heapStringPointer);
+    StringObj *stringObj = (StringObj *)unwrapObject(heapStringPointer);
     TEST_ASSERT_EQUAL_STRING("ab", stringObj->chars);
+}
+
+void testItShouldPrintSimpleExpression()
+{
+    const char *sourceCode = "print 5;";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[0]);
+}
+
+void testItShouldDoSimpleAssignmentAndPrint()
+{
+    const char *sourceCode = "var a; a = 1; print a;";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
+}
+
+void testItShouldDoSimpleAdditionWithAssignment()
+{
+    const char *sourceCode = "var a; a = 1; var b; b = 3; print a + b;";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("4.000000", test_messages[0]);
+}
+
+void testItShouldDoAssignmentWithDecl()
+{
+    const char *sourceCode = "var a = 1; print a;";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
+}
+
+void testItShouldDoComplexExpressionInDecl()
+{
+    const char *sourceCode = "var a = 1 + 3 * 4; print a;";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("13.000000", test_messages[0]);
 }
 
 int main(void)
@@ -301,5 +351,10 @@ int main(void)
     RUN_TEST(testItShouldDoEqualityBetweenTrueAndFalse);
     RUN_TEST(testItShouldPutStringOntoStack);
     RUN_TEST(testItShouldConcatStrings);
+    RUN_TEST(testItShouldPrintSimpleExpression);
+    RUN_TEST(testItShouldDoSimpleAssignmentAndPrint);
+    RUN_TEST(testItShouldDoSimpleAdditionWithAssignment);
+    RUN_TEST(testItShouldDoAssignmentWithDecl);
+    RUN_TEST(testItShouldDoComplexExpressionInDecl);
     return UNITY_END();
 }

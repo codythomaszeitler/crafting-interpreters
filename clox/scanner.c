@@ -46,6 +46,7 @@ static void mult(Lexer *, TokenArray *);
 static void minus(Lexer *, TokenArray *);
 static void slash(Lexer *, TokenArray *);
 static void bangOrNotEqual(Lexer *, TokenArray *);
+static void equals(Lexer *, TokenArray *);
 static void string(Lexer *, TokenArray *);
 static void digit(Lexer *, TokenArray *);
 
@@ -97,6 +98,10 @@ TokenArray parseTokens(const char *sourceCode)
         else if (current == '"')
         {
             string(&lexer, &tokenArray);
+        }
+        else if (current == '=')
+        {
+            equals(&lexer, &tokenArray);
         }
         else
         {
@@ -174,6 +179,14 @@ static void identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
         if (!strcasecmp("true", lexeme))
         {
             type = TOKEN_TRUE;
+        }
+    }
+
+    if (lexemeLength == 3)
+    {
+        if (!strcmp("var", lexeme))
+        {
+            type = TOKEN_VAR;
         }
     }
 
@@ -271,7 +284,8 @@ static void string(Lexer *lexer, TokenArray *tokenArray)
 {
     pop(lexer);
     int start = lexer->current;
-    while (peek(lexer) != '"') {
+    while (peek(lexer) != '"')
+    {
         pop(lexer);
     }
     int end = lexer->current;
@@ -284,6 +298,11 @@ static void string(Lexer *lexer, TokenArray *tokenArray)
     token.location.end = end + 1;
 
     writeToken(tokenArray, token);
+}
+
+static void equals(Lexer *lexer, TokenArray *tokenArray)
+{
+    writeToken(tokenArray, consumeSingleCharacter(lexer, TOKEN_EQUAL));
 }
 
 TokenArrayIterator tokensIterator(TokenArray array)
