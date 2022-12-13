@@ -154,11 +154,17 @@ static void variableDecl(Parser *parser)
 {
     popToken(parser->tokens);
     Token identifier = popToken(parser->tokens);
-    // So this bytecode... would look like
-    // OP_VAR_DECL a;
     writeChunk(parser->compiling, OP_VAR_DECL);
     writeString(parser->compiling, (const char *)identifier.lexeme);
-    popToken(parser->tokens);
+    Token equalsOrSemicolon = popToken(parser->tokens);
+
+    if (equalsOrSemicolon.type == TOKEN_EQUAL)
+    {
+        expression(parser);
+        writeChunk(parser->compiling, OP_VAR_ASSIGN);
+        writeString(parser->compiling, (const char *)identifier.lexeme);
+        popToken(parser->tokens);
+    }
 }
 
 static void variableAssignment(Parser *parser)
