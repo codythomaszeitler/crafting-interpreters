@@ -293,7 +293,7 @@ void testItShouldPrintSimpleExpression()
 
 void testItShouldDoSimpleAssignmentAndPrint()
 {
-    const char *sourceCode = "var a; a = 1; print a;";
+    const char *sourceCode = "{var a; a = 1; print a;}";
     testObject.onStdOut = logWhenDisassemble;
     runInterpreter(&testObject, sourceCode);
 
@@ -303,7 +303,7 @@ void testItShouldDoSimpleAssignmentAndPrint()
 
 void testItShouldDoSimpleAdditionWithAssignment()
 {
-    const char *sourceCode = "var a; a = 1; var b; b = 3; print a + b;";
+    const char *sourceCode = "{var a; a = 1; var b; b = 3; print a + b;}";
     testObject.onStdOut = logWhenDisassemble;
     runInterpreter(&testObject, sourceCode);
 
@@ -313,7 +313,7 @@ void testItShouldDoSimpleAdditionWithAssignment()
 
 void testItShouldDoAssignmentWithDecl()
 {
-    const char *sourceCode = "var a = 1; print a;";
+    const char *sourceCode = "{var a = 1; print a;}";
     testObject.onStdOut = logWhenDisassemble;
     runInterpreter(&testObject, sourceCode);
 
@@ -323,12 +323,21 @@ void testItShouldDoAssignmentWithDecl()
 
 void testItShouldDoComplexExpressionInDecl()
 {
-    const char *sourceCode = "var a = 1 + 3 * 4; print a;";
+    const char *sourceCode = "{var a = 1 + 3 * 4; print a;}";
     testObject.onStdOut = logWhenDisassemble;
     runInterpreter(&testObject, sourceCode);
 
     TEST_ASSERT_EQUAL(1, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("13.000000", test_messages[0]);
+}
+
+void testIsShouldRunWithinABlock() {
+    const char *sourceCode = "{var a; a = 3; print a;}";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("3.000000", test_messages[0]);
 }
 
 int main(void)
@@ -356,5 +365,6 @@ int main(void)
     RUN_TEST(testItShouldDoSimpleAdditionWithAssignment);
     RUN_TEST(testItShouldDoAssignmentWithDecl);
     RUN_TEST(testItShouldDoComplexExpressionInDecl);
+    RUN_TEST(testIsShouldRunWithinABlock);
     return UNITY_END();
 }

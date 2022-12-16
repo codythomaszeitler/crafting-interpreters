@@ -26,6 +26,8 @@ void testItShouldPutValueInWithKey()
     hashMapPut(&testObject, "a", wrapNumber(3.0));
     Value overriddenAValue = hashMapGet(&testObject, "a");
     TEST_ASSERT_EQUAL(3.0, unwrapNumber(overriddenAValue));
+
+    TEST_ASSERT_EQUAL(2, hashMapSize(&testObject));
 }
 
 void testItShouldGetNilIfNoKeyExists() {

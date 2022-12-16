@@ -20,5 +20,6 @@ void initHashMap(HashMap*);
 void freeHashMap(HashMap*);
 void hashMapPut(HashMap*, const char*, Value);
 Value hashMapGet(HashMap*, const char*);
+int hashMapSize(HashMap*);
 
 #endif

@@ -49,6 +49,8 @@ static void bangOrNotEqual(Lexer *, TokenArray *);
 static void equals(Lexer *, TokenArray *);
 static void string(Lexer *, TokenArray *);
 static void digit(Lexer *, TokenArray *);
+static void blockStart(Lexer *, TokenArray *);
+static void blockEnd(Lexer *, TokenArray *);
 
 TokenArray parseTokens(const char *sourceCode)
 {
@@ -102,6 +104,14 @@ TokenArray parseTokens(const char *sourceCode)
         else if (current == '=')
         {
             equals(&lexer, &tokenArray);
+        }
+        else if (current == '{')
+        {
+            blockStart(&lexer, &tokenArray);
+        }
+        else if (current == '}')
+        {
+            blockEnd(&lexer, &tokenArray);
         }
         else
         {
@@ -303,6 +313,16 @@ static void string(Lexer *lexer, TokenArray *tokenArray)
 static void equals(Lexer *lexer, TokenArray *tokenArray)
 {
     writeToken(tokenArray, consumeSingleCharacter(lexer, TOKEN_EQUAL));
+}
+
+static void blockStart(Lexer *lexer, TokenArray *tokens)
+{
+    writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_LEFT_BRACE));
+}
+
+static void blockEnd(Lexer *lexer, TokenArray *tokens)
+{
+    writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_RIGHT_BRACE));
 }
 
 TokenArrayIterator tokensIterator(TokenArray array)

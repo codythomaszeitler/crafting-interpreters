@@ -98,3 +98,28 @@ unsigned long hash(const unsigned char *str)
 
     return hash;
 }
+
+static int getNumElements(Entry *);
+
+int hashMapSize(HashMap *map)
+{
+    int size = 0;
+    for (int i = 0; i < _NUM_HASH_BUCKETS_; i++)
+    {
+        Entry *iterator = map->entries[i];
+        size = getNumElements(iterator) + size;
+    }
+    return size;
+}
+
+static int getNumElements(Entry *entry)
+{
+    Entry *iterator = entry;
+    int numElements = 0;
+    while (iterator != NULL)
+    {
+        numElements = numElements + 1;
+        iterator = iterator->next;
+    }
+    return numElements;
+}

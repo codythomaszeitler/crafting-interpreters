@@ -132,24 +132,22 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
         }
         else if (opCode == OP_VAR_DECL)
         {
-            char *chars = (char *)&bytecode->code[iterator + 1];
-            hashMapPut(&vm->global, chars, nil());
-
-            iterator = iterator + strlen(chars) + 1 + 1;
+            Value nullValue = nil();
+            push(vm, nullValue);
+            iterator = iterator + 1;
         }
         else if (opCode == OP_VAR_ASSIGN) {
-            char *chars = (char*) &bytecode->code[iterator + 1];
-            Value value = pop(vm);
-            hashMapPut(&vm->global, chars, value);
+            uint8_t offset = bytecode->code[iterator + 1];
+            vm->stack[offset] = pop(vm);
 
-            iterator = iterator + strlen(chars) + 1 + 1;
+            iterator = iterator + 2;
         }
         else if (opCode == OP_VAR_EXPRESSION) {
-            char *chars = (char*) &bytecode->code[iterator + 1];
-            Value value = hashMapGet(&vm->global, chars);
+            uint8_t offset = bytecode->code[iterator + 1];
+            Value value =  vm->stack[offset]; 
             push(vm, value);
 
-            iterator = iterator + strlen(chars) + 1 + 1;
+            iterator = iterator + 2;
         }
         else
         {

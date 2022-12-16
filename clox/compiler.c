@@ -6,10 +6,22 @@
 #include <string.h>
 #include <stdbool.h>
 
+// So the parser is compiling something... that feels like
+// more of a "Compiler"?
+
+typedef struct LocationStackLocation
+{
+    Token token;
+} LocationStackLocation;
+
 typedef struct Parser
 {
     TokenArrayIterator *tokens;
     Chunk *compiling;
+
+    int stackDepth;
+    int blockDepth;
+    LocationStackLocation stack[256];
 } Parser;
 
 typedef void (*ParseFn)(Parser *);
@@ -27,7 +39,9 @@ static void unary(Parser *);
 static void literal(Parser *);
 static void expression(Parser *);
 static void parseExpression(Precedence, Parser *);
-static bool isAtEndOfStatement(Parser *parser);
+static bool isAtEndOfStatement(Parser *);
+static uint8_t getVariableBinding(Parser *, Token);
+static void statement(Parser *);
 
 ParseRule rules[] = {
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
@@ -77,8 +91,10 @@ static void literal(Parser *parser)
     }
     else if (shouldBeTrue.type == TOKEN_IDENTIFIER)
     {
+        uint8_t stackLocation = getVariableBinding(parser, shouldBeTrue);
+
         writeChunk(parser->compiling, OP_VAR_EXPRESSION);
-        writeString(parser->compiling, (const char *)shouldBeTrue.lexeme);
+        writeChunk(parser->compiling, stackLocation);
     }
 }
 
@@ -150,19 +166,49 @@ static void printStatement(Parser *parser)
     popToken(parser->tokens);
 }
 
+static void defineVariableBinding(Parser *parser, Token token)
+{
+    if (parser->blockDepth != -1)
+    {
+        LocationStackLocation *slot = &parser->stack[parser->stackDepth];
+        slot->token = token;
+
+        parser->stackDepth++;
+    }
+}
+
+static uint8_t getVariableBinding(Parser *parser, Token token)
+{
+    if (parser->blockDepth != -1)
+    {
+        for (int i = parser->stackDepth; i >= 0; i--)
+        {
+            LocationStackLocation *slot = &parser->stack[i];
+            if (!strcmp(token.lexeme, slot->token.lexeme))
+            {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
 static void variableDecl(Parser *parser)
 {
     popToken(parser->tokens);
     Token identifier = popToken(parser->tokens);
     writeChunk(parser->compiling, OP_VAR_DECL);
-    writeString(parser->compiling, (const char *)identifier.lexeme);
     Token equalsOrSemicolon = popToken(parser->tokens);
+
+    defineVariableBinding(parser, identifier);
 
     if (equalsOrSemicolon.type == TOKEN_EQUAL)
     {
         expression(parser);
         writeChunk(parser->compiling, OP_VAR_ASSIGN);
-        writeString(parser->compiling, (const char *)identifier.lexeme);
+
+        uint8_t offset = getVariableBinding(parser, identifier);
+        writeChunk(parser->compiling, offset);
         popToken(parser->tokens);
     }
 }
@@ -175,7 +221,23 @@ static void variableAssignment(Parser *parser)
     expression(parser);
 
     writeChunk(parser->compiling, OP_VAR_ASSIGN);
-    writeString(parser->compiling, (const char *)identifier.lexeme);
+    uint8_t offset = getVariableBinding(parser, identifier);
+    writeChunk(parser->compiling, offset);
+    popToken(parser->tokens);
+}
+
+static void blockStatement(Parser *parser)
+{
+    popToken(parser->tokens);
+
+    parser->blockDepth++;
+    int stackDepthStart = parser->stackDepth;
+    while (peekAtToken(parser->tokens).type != TOKEN_RIGHT_BRACE)
+    {
+        statement(parser);
+    }
+    parser->stackDepth = stackDepthStart;
+    parser->blockDepth--;
     popToken(parser->tokens);
 }
 
@@ -195,6 +257,10 @@ static void statement(Parser *parser)
     {
         variableAssignment(parser);
     }
+    else if (peeked.type == TOKEN_LEFT_BRACE)
+    {
+        blockStatement(parser);
+    }
     else
     {
         expression(parser);
@@ -209,6 +275,8 @@ void compile(Chunk *chunk, const char *sourceCode)
     Parser parser;
     parser.compiling = chunk;
     parser.tokens = &iterator;
+    parser.stackDepth = 0;
+    parser.blockDepth = -1;
 
     while (hasNextToken(parser.tokens))
     {
