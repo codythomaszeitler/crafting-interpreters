@@ -105,17 +105,17 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
             push(vm, result);
             iterator = iterator + getByteLengthFor(opCode);
         }
+        // What a weird op code that I have defined here...
         else if (opCode == OP_STRING)
         {
-
             char *chars = (char *)&bytecode->code[iterator + 1];
 
-            StringObj *stringObj = wrapString(chars);
-            Value reference = wrapObject((Obj *)stringObj);
+            Value string = wrapString(chars);
+            StringObj* underlying = (StringObj*)unwrapObject(string);
 
-            push(vm, reference);
+            push(vm, string);
 
-            iterator = iterator + 1 + stringObj->length + 1;
+            iterator = iterator + 1 + underlying->length + 1;
         }
         else if (opCode == OP_PRINT)
         {

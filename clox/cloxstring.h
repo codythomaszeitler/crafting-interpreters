@@ -1,6 +1,7 @@
 #ifndef CLOXSTRING_HEADER
 #define CLOXSTRING_HEADER
 
+#include "value.h"
 #include "object.h"
 
 typedef struct StringObj {
@@ -9,7 +10,8 @@ typedef struct StringObj {
     char* chars;
 } StringObj;
 
-StringObj* wrapString(const char*);
+StringObj* asString(const char *);
+Value wrapString(const char*);
 
 void freeStringObj(StringObj*);
 
