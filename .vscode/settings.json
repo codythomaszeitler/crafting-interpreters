@@ -4,7 +4,11 @@
         "type_traits": "c",
         "memory.h": "c",
         "cloxstring.h": "c",
-        "object.h": "c"
+        "object.h": "c",
+        "compiler.h": "c",
+        "cstdint": "c",
+        "vm.h": "c",
+        "unity.h": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

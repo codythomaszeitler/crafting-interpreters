@@ -40,7 +40,9 @@ static void literal(Parser *);
 static void expression(Parser *);
 static void parseExpression(Precedence, Parser *);
 static bool isAtEndOfStatement(Parser *);
+static bool isGlobalBinding(Parser *, Token);
 static uint8_t getVariableBinding(Parser *, Token);
+static int getVariableBindingAsInt(Parser *parser, Token token);
 static void statement(Parser *);
 
 ParseRule rules[] = {
@@ -177,8 +179,21 @@ static void defineVariableBinding(Parser *parser, Token token)
     }
 }
 
+#define _BINDING_NOT_FOUND_ -1
+static bool isGlobalBinding(Parser *parser, Token token)
+{
+    int bindingLocation = getVariableBinding(parser, token);
+    return bindingLocation != _BINDING_NOT_FOUND_;
+}
+
 static uint8_t getVariableBinding(Parser *parser, Token token)
 {
+    return getVariableBindingAsInt(parser, token);
+}
+
+static int getVariableBindingAsInt(Parser *parser, Token token)
+{
+    int bindingLocation = _BINDING_NOT_FOUND_;
     if (parser->blockDepth != -1)
     {
         for (int i = parser->stackDepth - 1; i >= 0; i--)
@@ -186,30 +201,49 @@ static uint8_t getVariableBinding(Parser *parser, Token token)
             LocationStackLocation *slot = &parser->stack[i];
             if (!strcmp(token.lexeme, slot->token.lexeme))
             {
-                return i;
+                bindingLocation = i;
+                break;
             }
         }
     }
-    return -1;
+    return bindingLocation;
+}
+
+static bool isInGlobalScope(Parser *parser)
+{
+    return parser->blockDepth == -1;
 }
 
 static void variableDecl(Parser *parser)
 {
     popToken(parser->tokens);
     Token identifier = popToken(parser->tokens);
-    writeChunk(parser->compiling, OP_VAR_DECL);
-    Token equalsOrSemicolon = popToken(parser->tokens);
 
-    defineVariableBinding(parser, identifier);
+    if (isInGlobalScope(parser))
+    {
+        writeChunk(parser->compiling, OP_VAR_GLOBAL_ASSIGN);
+    }
+    else
+    {
+        writeChunk(parser->compiling, OP_VAR_DECL);
+        defineVariableBinding(parser, identifier);
+    }
+
+    Token equalsOrSemicolon = popToken(parser->tokens);
 
     if (equalsOrSemicolon.type == TOKEN_EQUAL)
     {
         expression(parser);
-        writeChunk(parser->compiling, OP_VAR_ASSIGN);
-
-        uint8_t offset = getVariableBinding(parser, identifier);
-        writeChunk(parser->compiling, offset);
-        popToken(parser->tokens);
+        if (isGlobalBinding(parser, identifier))
+        {
+        }
+        else
+        {
+            writeChunk(parser->compiling, OP_VAR_ASSIGN);
+            uint8_t offset = getVariableBinding(parser, identifier);
+            writeChunk(parser->compiling, offset);
+            popToken(parser->tokens);
+        }
     }
 }
 
@@ -237,9 +271,10 @@ static void blockStatement(Parser *parser)
         statement(parser);
     }
 
-    // So w/e the difference between stactDepthCurrent and start 
+    // So w/e the difference between stactDepthCurrent and start
     int numLocals = parser->stackDepth - stackDepthStart;
-    for (int i = 0; i < numLocals; i++) {
+    for (int i = 0; i < numLocals; i++)
+    {
         writeChunk(parser->compiling, OP_POP);
     }
 
