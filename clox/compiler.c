@@ -181,7 +181,7 @@ static uint8_t getVariableBinding(Parser *parser, Token token)
 {
     if (parser->blockDepth != -1)
     {
-        for (int i = parser->stackDepth; i >= 0; i--)
+        for (int i = parser->stackDepth - 1; i >= 0; i--)
         {
             LocationStackLocation *slot = &parser->stack[i];
             if (!strcmp(token.lexeme, slot->token.lexeme))
@@ -236,6 +236,13 @@ static void blockStatement(Parser *parser)
     {
         statement(parser);
     }
+
+    // So w/e the difference between stactDepthCurrent and start 
+    int numLocals = parser->stackDepth - stackDepthStart;
+    for (int i = 0; i < numLocals; i++) {
+        writeChunk(parser->compiling, OP_POP);
+    }
+
     parser->stackDepth = stackDepthStart;
     parser->blockDepth--;
     popToken(parser->tokens);

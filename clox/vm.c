@@ -132,22 +132,28 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
         }
         else if (opCode == OP_VAR_DECL)
         {
-            Value nullValue = nil();
-            push(vm, nullValue);
+            push(vm, nil());
             iterator = iterator + 1;
         }
-        else if (opCode == OP_VAR_ASSIGN) {
+        else if (opCode == OP_VAR_ASSIGN)
+        {
             uint8_t offset = bytecode->code[iterator + 1];
             vm->stack[offset] = pop(vm);
 
             iterator = iterator + 2;
         }
-        else if (opCode == OP_VAR_EXPRESSION) {
+        else if (opCode == OP_VAR_EXPRESSION)
+        {
             uint8_t offset = bytecode->code[iterator + 1];
-            Value value =  vm->stack[offset]; 
+            Value value = vm->stack[offset];
             push(vm, value);
 
             iterator = iterator + 2;
+        }
+        else if (opCode == OP_POP)
+        {
+            pop(vm);
+            iterator = iterator + 1;
         }
         else
         {

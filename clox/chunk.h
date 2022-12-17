@@ -19,7 +19,8 @@ typedef enum {
     OP_VAR_DECL,
     OP_VAR_ASSIGN,
     OP_VAR_EXPRESSION,
-    OP_STACK_PEEK
+    OP_STACK_PEEK,
+    OP_POP
 } OpCode;
 
 uint8_t getByteLengthFor(OpCode opCode);

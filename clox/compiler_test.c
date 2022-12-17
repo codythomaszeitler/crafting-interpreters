@@ -331,13 +331,25 @@ void testItShouldDoComplexExpressionInDecl()
     TEST_ASSERT_EQUAL_STRING("13.000000", test_messages[0]);
 }
 
-void testIsShouldRunWithinABlock() {
+void testIsShouldRunWithinABlock()
+{
     const char *sourceCode = "{var a; a = 3; print a;}";
     testObject.onStdOut = logWhenDisassemble;
     runInterpreter(&testObject, sourceCode);
 
     TEST_ASSERT_EQUAL(1, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("3.000000", test_messages[0]);
+}
+
+void testItShouldRunTwoBlocksAndPrintCorrectValues()
+{
+    const char* sourceCode = "{var d; d = 4; {var a; a = 2 + d; print a;}{var b; b = 5; print b;}}";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(2, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("6.000000", test_messages[0]);
+    TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[1]);
 }
 
 int main(void)
@@ -366,5 +378,6 @@ int main(void)
     RUN_TEST(testItShouldDoAssignmentWithDecl);
     RUN_TEST(testItShouldDoComplexExpressionInDecl);
     RUN_TEST(testIsShouldRunWithinABlock);
+    RUN_TEST(testItShouldRunTwoBlocksAndPrintCorrectValues);
     return UNITY_END();
 }
