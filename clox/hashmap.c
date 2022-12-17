@@ -4,6 +4,7 @@
 #include "stdlib.h"
 #include "string.h"
 #include <math.h>
+#include "cloxstring.h"
 
 unsigned long hash(const unsigned char *str);
 
@@ -29,9 +30,9 @@ void freeHashMap(HashMap *map)
     }
 }
 
-void hashMapPut(HashMap *map, const char *key, Value value)
+void hashMapPut(HashMap *map, StringObj *key, Value value)
 {
-    unsigned long hashed = hash((const unsigned char *)key);
+    unsigned long hashed = hash((const unsigned char *)key->chars);
     unsigned long bucket = hashed % _NUM_HASH_BUCKETS_;
 
     Entry *iterator = map->entries[bucket];
@@ -46,7 +47,7 @@ void hashMapPut(HashMap *map, const char *key, Value value)
     {
         while (iterator != NULL)
         {
-            if (!strcmp(iterator->key, key))
+            if (!strcmp(iterator->key->chars, key->chars))
             {
                 iterator->value = value;
                 break;
@@ -65,9 +66,9 @@ void hashMapPut(HashMap *map, const char *key, Value value)
     }
 }
 
-Value hashMapGet(HashMap *map, const char *key)
+Value hashMapGet(HashMap *map, StringObj* key)
 {
-    unsigned long hashed = hash((const unsigned char *)key);
+    unsigned long hashed = hash((const unsigned char *)key->chars);
     unsigned long bucket = hashed % _NUM_HASH_BUCKETS_;
 
     Entry *iterator = map->entries[bucket];
@@ -78,7 +79,7 @@ Value hashMapGet(HashMap *map, const char *key)
 
     while (iterator != NULL)
     {
-        if (!strcmp(iterator->key, key))
+        if (!strcmp(iterator->key->chars, key->chars))
         {
             return iterator->value;
         }
@@ -97,4 +98,29 @@ unsigned long hash(const unsigned char *str)
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
 
     return hash;
+}
+
+static int getNumElements(Entry *);
+
+int hashMapSize(HashMap *map)
+{
+    int size = 0;
+    for (int i = 0; i < _NUM_HASH_BUCKETS_; i++)
+    {
+        Entry *iterator = map->entries[i];
+        size = getNumElements(iterator) + size;
+    }
+    return size;
+}
+
+static int getNumElements(Entry *entry)
+{
+    Entry *iterator = entry;
+    int numElements = 0;
+    while (iterator != NULL)
+    {
+        numElements = numElements + 1;
+        iterator = iterator->next;
+    }
+    return numElements;
 }

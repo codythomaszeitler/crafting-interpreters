@@ -2,12 +2,13 @@
 #define HASHMAP_HEADER
 
 #include "value.h"
+#include "cloxstring.h"
 
 #define _NUM_HASH_BUCKETS_ 256
 
 typedef struct Entry Entry;
 struct Entry {
-    const char* key;
+    StringObj* key;
     Value value;
     Entry* next;
 };
@@ -18,7 +19,8 @@ typedef struct HashMap {
 
 void initHashMap(HashMap*);
 void freeHashMap(HashMap*);
-void hashMapPut(HashMap*, const char*, Value);
-Value hashMapGet(HashMap*, const char*);
+void hashMapPut(HashMap*, StringObj*, Value);
+Value hashMapGet(HashMap*, StringObj*);
+int hashMapSize(HashMap*);
 
 #endif

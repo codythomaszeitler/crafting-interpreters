@@ -105,17 +105,17 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
             push(vm, result);
             iterator = iterator + getByteLengthFor(opCode);
         }
+        // What a weird op code that I have defined here...
         else if (opCode == OP_STRING)
         {
-
             char *chars = (char *)&bytecode->code[iterator + 1];
 
-            StringObj *stringObj = wrapString(chars);
-            Value reference = wrapObject((Obj *)stringObj);
+            Value string = wrapString(chars);
+            StringObj *underlying = (StringObj *)unwrapObject(string);
 
-            push(vm, reference);
+            push(vm, string);
 
-            iterator = iterator + 1 + stringObj->length + 1;
+            iterator = iterator + 1 + underlying->length + 1;
         }
         else if (opCode == OP_PRINT)
         {
@@ -132,24 +132,57 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
         }
         else if (opCode == OP_VAR_DECL)
         {
-            char *chars = (char *)&bytecode->code[iterator + 1];
-            hashMapPut(&vm->global, chars, nil());
-
-            iterator = iterator + strlen(chars) + 1 + 1;
+            push(vm, nil());
+            iterator = iterator + 1;
         }
-        else if (opCode == OP_VAR_ASSIGN) {
-            char *chars = (char*) &bytecode->code[iterator + 1];
-            Value value = pop(vm);
-            hashMapPut(&vm->global, chars, value);
+        else if (opCode == OP_VAR_ASSIGN)
+        {
+            uint8_t offset = bytecode->code[iterator + 1];
+            vm->stack[offset] = pop(vm);
 
-            iterator = iterator + strlen(chars) + 1 + 1;
+            iterator = iterator + 2;
         }
-        else if (opCode == OP_VAR_EXPRESSION) {
-            char *chars = (char*) &bytecode->code[iterator + 1];
-            Value value = hashMapGet(&vm->global, chars);
+        else if (opCode == OP_VAR_EXPRESSION)
+        {
+            uint8_t offset = bytecode->code[iterator + 1];
+            Value value = vm->stack[offset];
             push(vm, value);
 
-            iterator = iterator + strlen(chars) + 1 + 1;
+            iterator = iterator + 2;
+        }
+        else if (opCode == OP_VAR_GLOBAL_DECL)
+        {
+            int constantIndex = bytecode->code[iterator + 1];
+            Value constant = getConstantAt(bytecode, constantIndex);
+            StringObj* asString = (StringObj*)unwrapObject(constant);
+            hashMapPut(&vm->global, asString, nil());
+
+            iterator = iterator + 2;
+        }
+        else if (opCode == OP_VAR_GLOBAL_ASSIGN)
+        {
+            int constantIndex = bytecode->code[iterator + 1];
+            Value constant = getConstantAt(bytecode, constantIndex);
+            StringObj* asString = (StringObj*)unwrapObject(constant);
+
+            hashMapPut(&vm->global, asString, pop(vm));
+
+            iterator = iterator + 2;
+        }
+        else if (opCode == OP_VAR_GLOBAL_EXPRESSION)
+        {
+            int constantIndex = bytecode->code[iterator + 1];
+            Value constant = getConstantAt(bytecode, constantIndex);
+            StringObj* asString = (StringObj*)unwrapObject(constant);
+
+            push(vm, hashMapGet(&vm->global, asString));
+
+            iterator = iterator + 2;
+        }
+        else if (opCode == OP_POP)
+        {
+            pop(vm);
+            iterator = iterator + 1;
         }
         else
         {
