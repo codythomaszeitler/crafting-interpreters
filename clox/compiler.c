@@ -93,10 +93,19 @@ static void literal(Parser *parser)
     }
     else if (shouldBeTrue.type == TOKEN_IDENTIFIER)
     {
-        uint8_t stackLocation = getVariableBinding(parser, shouldBeTrue);
+        if (isGlobalBinding(parser, shouldBeTrue))
+        {
+            int constantLocation = addConstant(parser->compiling, wrapString(shouldBeTrue.lexeme));
+            writeChunk(parser->compiling, OP_VAR_GLOBAL_EXPRESSION);
+            writeChunk(parser->compiling, constantLocation);
+        }
+        else
+        {
+            uint8_t stackLocation = getVariableBinding(parser, shouldBeTrue);
 
-        writeChunk(parser->compiling, OP_VAR_EXPRESSION);
-        writeChunk(parser->compiling, stackLocation);
+            writeChunk(parser->compiling, OP_VAR_EXPRESSION);
+            writeChunk(parser->compiling, stackLocation);
+        }
     }
 }
 
@@ -182,8 +191,8 @@ static void defineVariableBinding(Parser *parser, Token token)
 #define _BINDING_NOT_FOUND_ -1
 static bool isGlobalBinding(Parser *parser, Token token)
 {
-    int bindingLocation = getVariableBinding(parser, token);
-    return bindingLocation != _BINDING_NOT_FOUND_;
+    int bindingLocation = getVariableBindingAsInt(parser, token);
+    return bindingLocation == _BINDING_NOT_FOUND_;
 }
 
 static uint8_t getVariableBinding(Parser *parser, Token token)
@@ -221,7 +230,10 @@ static void variableDecl(Parser *parser)
 
     if (isInGlobalScope(parser))
     {
-        writeChunk(parser->compiling, OP_VAR_GLOBAL_ASSIGN);
+        writeChunk(parser->compiling, OP_VAR_GLOBAL_DECL);
+        Value asString = wrapString(identifier.lexeme);
+        int constantLocation = addConstant(parser->compiling, asString);
+        writeChunk(parser->compiling, constantLocation);
     }
     else
     {
@@ -236,14 +248,18 @@ static void variableDecl(Parser *parser)
         expression(parser);
         if (isGlobalBinding(parser, identifier))
         {
+            writeChunk(parser->compiling, OP_VAR_GLOBAL_ASSIGN);
+            Value asString = wrapString(identifier.lexeme);
+            int constantLocation = addConstant(parser->compiling, asString);
+            writeChunk(parser->compiling, constantLocation);
         }
         else
         {
             writeChunk(parser->compiling, OP_VAR_ASSIGN);
             uint8_t offset = getVariableBinding(parser, identifier);
             writeChunk(parser->compiling, offset);
-            popToken(parser->tokens);
         }
+        popToken(parser->tokens);
     }
 }
 
@@ -254,9 +270,19 @@ static void variableAssignment(Parser *parser)
 
     expression(parser);
 
-    writeChunk(parser->compiling, OP_VAR_ASSIGN);
-    uint8_t offset = getVariableBinding(parser, identifier);
-    writeChunk(parser->compiling, offset);
+    if (isGlobalBinding(parser, identifier))
+    {
+        writeChunk(parser->compiling, OP_VAR_GLOBAL_ASSIGN);
+        int constantLocation = addConstant(parser->compiling, wrapString(identifier.lexeme));
+        writeChunk(parser->compiling, constantLocation);
+    }
+    else
+    {
+        writeChunk(parser->compiling, OP_VAR_ASSIGN);
+        uint8_t offset = getVariableBinding(parser, identifier);
+        writeChunk(parser->compiling, offset);
+    }
+
     popToken(parser->tokens);
 }
 
@@ -271,7 +297,6 @@ static void blockStatement(Parser *parser)
         statement(parser);
     }
 
-    // So w/e the difference between stactDepthCurrent and start
     int numLocals = parser->stackDepth - stackDepthStart;
     for (int i = 0; i < numLocals; i++)
     {

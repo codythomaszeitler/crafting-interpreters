@@ -111,7 +111,7 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
             char *chars = (char *)&bytecode->code[iterator + 1];
 
             Value string = wrapString(chars);
-            StringObj* underlying = (StringObj*)unwrapObject(string);
+            StringObj *underlying = (StringObj *)unwrapObject(string);
 
             push(vm, string);
 
@@ -147,6 +147,35 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
             uint8_t offset = bytecode->code[iterator + 1];
             Value value = vm->stack[offset];
             push(vm, value);
+
+            iterator = iterator + 2;
+        }
+        else if (opCode == OP_VAR_GLOBAL_DECL)
+        {
+            int constantIndex = bytecode->code[iterator + 1];
+            Value constant = getConstantAt(bytecode, constantIndex);
+            StringObj* asString = (StringObj*)unwrapObject(constant);
+            hashMapPut(&vm->global, asString, nil());
+
+            iterator = iterator + 2;
+        }
+        else if (opCode == OP_VAR_GLOBAL_ASSIGN)
+        {
+            int constantIndex = bytecode->code[iterator + 1];
+            Value constant = getConstantAt(bytecode, constantIndex);
+            StringObj* asString = (StringObj*)unwrapObject(constant);
+
+            hashMapPut(&vm->global, asString, pop(vm));
+
+            iterator = iterator + 2;
+        }
+        else if (opCode == OP_VAR_GLOBAL_EXPRESSION)
+        {
+            int constantIndex = bytecode->code[iterator + 1];
+            Value constant = getConstantAt(bytecode, constantIndex);
+            StringObj* asString = (StringObj*)unwrapObject(constant);
+
+            push(vm, hashMapGet(&vm->global, asString));
 
             iterator = iterator + 2;
         }
