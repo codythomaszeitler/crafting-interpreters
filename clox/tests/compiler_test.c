@@ -30,7 +30,7 @@ void tearDown()
 }
 
 // So this really isn't a good test...
-// It's testing the implementation details of the interpreter. 
+// It's testing the implementation details of the interpreter.
 void testItShouldBeAbleToCompileExpression()
 {
     const char *sourceCode = "print 5;";
@@ -355,12 +355,33 @@ void testItShouldRunTwoBlocksAndPrintCorrectValues()
 
 void testItShouldBeAbleToReadFromGlobalScope()
 {
-    const char* sourceCode = "var a; a = 5; print a;";
+    const char *sourceCode = "var a; a = 5; print a;";
     testObject.onStdOut = logWhenDisassemble;
     runInterpreter(&testObject, sourceCode);
 
     TEST_ASSERT_EQUAL(1, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[0]);
+}
+
+void testItShouldBeAbleToGoIntoIfConditional()
+{
+    const char *sourceCode = "{var a = true; if (a) { print 5; } print 3;}";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(2, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[0]);
+    TEST_ASSERT_EQUAL_STRING("3.000000", test_messages[1]);
+}
+
+void testItShouldBeAbleToNotGoIntoIfConditional()
+{
+    const char *sourceCode = "{var a = false; if (a) { print 5; } print 3;}";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("3.000000", test_messages[0]);
 }
 
 int main(void)
@@ -391,5 +412,7 @@ int main(void)
     RUN_TEST(testIsShouldRunWithinABlock);
     RUN_TEST(testItShouldRunTwoBlocksAndPrintCorrectValues);
     RUN_TEST(testItShouldBeAbleToReadFromGlobalScope);
+    RUN_TEST(testItShouldBeAbleToGoIntoIfConditional);
+    RUN_TEST(testItShouldBeAbleToNotGoIntoIfConditional);
     return UNITY_END();
 }

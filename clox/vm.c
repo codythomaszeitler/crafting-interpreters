@@ -199,6 +199,24 @@ static void interpretPop(VirtualMachine *vm, Chunk *bytecode)
     vm->ip = vm->ip + 1;
 }
 
+static void interpretJumpIfFalse(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value expression = pop(vm);
+    bool unwrapped = unwrapBool(expression);
+
+    if (!unwrapped)
+    {
+        uint8_t msb = *(vm->ip + 1);
+        uint8_t lsb = *(vm->ip + 2);
+        uint16_t jumpLocation = (msb << 8) | lsb;
+        vm->ip = &bytecode->code[jumpLocation];
+    }
+    else
+    {
+        vm->ip = vm->ip + 3;
+    }
+}
+
 static bool isAtEndOfBytecode(VirtualMachine *vm, Chunk *bytecode)
 {
     OpCode opCode = *(vm->ip);
@@ -267,6 +285,9 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
             break;
         case OP_POP:
             interpretPop(vm, bytecode);
+            break;
+        case OP_JUMP_IF_FALSE:
+            interpretJumpIfFalse(vm, bytecode);
             break;
         default:
             printf("Invalid op code.");

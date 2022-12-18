@@ -23,7 +23,8 @@ typedef enum {
     OP_POP, 
     OP_VAR_GLOBAL_DECL,
     OP_VAR_GLOBAL_ASSIGN,
-    OP_VAR_GLOBAL_EXPRESSION
+    OP_VAR_GLOBAL_EXPRESSION,
+    OP_JUMP_IF_FALSE
 } OpCode;
 
 uint8_t getByteLengthFor(OpCode opCode);
@@ -37,6 +38,9 @@ typedef struct Chunk {
 
 void initChunk(Chunk* chunk);
 void writeChunk(Chunk* chunk, uint8_t value);
+void writeShort(Chunk* chunk, uint16_t value);
+void overwriteShort(Chunk *chunk, int index, uint16_t value);
+uint16_t readShort(Chunk *chunk, int index);
 void freeChunk(Chunk* chunk);
 
 int addConstant(Chunk* chunk, Value constant);
