@@ -25,16 +25,14 @@
         "-g",
         "${workspaceFolder}\\clox\\unity\\src\\unity.c",
         "-o",
-        "${workspaceFolder}\\clox\\main.exe"
+        "${workspaceFolder}\\clox\\test_runner.exe"
       ],
       "options": {
         "cwd": "C:\\msys64\\mingw64\\bin"
       },
-      "problemMatcher": [
-        "$gcc"
-      ],
+      "problemMatcher": ["$gcc"],
       "group": {
-        "kind": "build",
+        "kind": "test",
         "isDefault": true
       },
       "detail": "This should be ran when compiling a test file."
@@ -65,9 +63,7 @@
       "options": {
         "cwd": "C:\\msys64\\mingw64\\bin"
       },
-      "problemMatcher": [
-        "$gcc"
-      ],
+      "problemMatcher": ["$gcc"],
       "group": {
         "kind": "build",
         "isDefault": false

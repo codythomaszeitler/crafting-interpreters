@@ -6,188 +6,294 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdbool.h>
+
+static void stdOutPrinter(char *toPrint)
+{
+    printf(toPrint);
+}
 
 void initVirtualMachine(VirtualMachine *vm)
 {
     vm->currentStackIndex = 0;
-    vm->onStdOut = NULL;
+    vm->onStdOut = stdOutPrinter;
+    vm->ip = NULL;
 
-    // How can our VM
-    // Our VM would be running in a certain context, right?
     initHashMap(&vm->global);
+}
+
+static void interpretConstant(VirtualMachine *vm, Chunk *bytecode)
+{
+    int constantIndex = *(vm->ip + 1);
+    Value constant = getConstantAt(bytecode, constantIndex);
+    push(vm, constant);
+
+    vm->ip = vm->ip + getByteLengthFor(OP_CONSTANT);
+}
+
+static void interpretNegate(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value value = pop(vm);
+    push(vm, negate(value));
+
+    vm->ip = vm->ip + getByteLengthFor(OP_NEGATE);
+}
+
+static void interpretAdd(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value rightValue = pop(vm);
+    Value leftValue = pop(vm);
+
+    Value result = add(leftValue, rightValue);
+    push(vm, result);
+
+    vm->ip = vm->ip + getByteLengthFor(OP_ADD);
+}
+
+static void interpretMultiplication(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value rightValue = pop(vm);
+    Value leftValue = pop(vm);
+
+    double right = unwrapNumber(rightValue);
+    double left = unwrapNumber(leftValue);
+
+    Value result = wrapNumber(left * right);
+    push(vm, result);
+
+    vm->ip = vm->ip + getByteLengthFor(OP_MULT);
+}
+
+static void interpretDivision(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value rightValue = pop(vm);
+    Value leftValue = pop(vm);
+
+    double right = unwrapNumber(rightValue);
+    double left = unwrapNumber(leftValue);
+    Value result = wrapNumber(left / right);
+    push(vm, result);
+
+    vm->ip = vm->ip + getByteLengthFor(OP_DIV);
+}
+
+static void interpretSubtraction(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value rightValue = pop(vm);
+    Value leftValue = pop(vm);
+
+    double right = unwrapNumber(rightValue);
+    double left = unwrapNumber(leftValue);
+    Value result = wrapNumber(left - right);
+    push(vm, result);
+
+    vm->ip = vm->ip + getByteLengthFor(OP_SUB);
+}
+
+static void interpretTrue(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value boolean = wrapBool(true);
+    push(vm, boolean);
+    vm->ip = vm->ip + getByteLengthFor(OP_TRUE);
+}
+
+static void interpretFalse(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value boolean = wrapBool(false);
+    push(vm, boolean);
+    vm->ip = vm->ip + getByteLengthFor(OP_FALSE);
+}
+
+static void interpretEquals(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value right = pop(vm);
+    Value left = pop(vm);
+    Value result = wrapBool(equals(left, right));
+    push(vm, result);
+
+    vm->ip = vm->ip + getByteLengthFor(OP_EQUAL);
+}
+
+static void interpretString(VirtualMachine *vm, Chunk *bytecode)
+{
+    char *chars = (char *)(vm->ip + 1);
+
+    Value string = wrapString(chars);
+    StringObj *underlying = (StringObj *)unwrapObject(string);
+
+    push(vm, string);
+
+    // It needs to be one extra for the null terminated string. 
+    vm->ip = vm->ip + underlying->length + 2;
+}
+
+static void interpretPrint(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value expression = pop(vm);
+    int length = snprintf(NULL, 0, "%f", unwrapNumber(expression));
+
+    char *line = malloc(sizeof(char) * length + 1);
+    snprintf(line, length + 1, "%f", unwrapNumber(expression));
+    line[length] = '\0';
+
+    vm->onStdOut(line);
+    vm->ip = vm->ip + 1;
+}
+
+static void interpretVarDecl(VirtualMachine *vm, Chunk *bytecode)
+{
+    push(vm, nil());
+    vm->ip = vm->ip + getByteLengthFor(OP_VAR_DECL);
+}
+
+static void interpretVarAssign(VirtualMachine *vm, Chunk *bytecode)
+{
+    uint8_t offset = *(vm->ip + 1);
+    vm->stack[offset] = pop(vm);
+    vm->ip = vm->ip + 2;
+}
+
+static void interpretVarExpression(VirtualMachine *vm, Chunk *bytecode)
+{
+    uint8_t offset = *(vm->ip + 1);
+    Value value = vm->stack[offset];
+    push(vm, value);
+
+    vm->ip = vm->ip + 2;
+}
+
+static void interpretGlobalVarDecl(VirtualMachine *vm, Chunk *bytecode)
+{
+    int constantIndex = *(vm->ip + 1);
+    Value constant = getConstantAt(bytecode, constantIndex);
+    StringObj *asString = (StringObj *)unwrapObject(constant);
+    hashMapPut(&vm->global, asString, nil());
+
+    vm->ip = vm->ip + 2;
+}
+
+static void interpretGlobalVarAssign(VirtualMachine *vm, Chunk *bytecode)
+{
+    int constantIndex = *(vm->ip + 1);
+    Value constant = getConstantAt(bytecode, constantIndex);
+    StringObj *asString = (StringObj *)unwrapObject(constant);
+
+    hashMapPut(&vm->global, asString, pop(vm));
+    vm->ip = vm->ip + 2;
+}
+
+static void interpretGlobalExpression(VirtualMachine *vm, Chunk *bytecode)
+{
+    int constantIndex = *(vm->ip + 1);
+    Value constant = getConstantAt(bytecode, constantIndex);
+    StringObj *asString = (StringObj *)unwrapObject(constant);
+
+    push(vm, hashMapGet(&vm->global, asString));
+
+    vm->ip = vm->ip + 2;
+}
+
+static void interpretPop(VirtualMachine *vm, Chunk *bytecode)
+{
+    pop(vm);
+    vm->ip = vm->ip + 1;
+}
+
+static bool isAtEndOfBytecode(VirtualMachine *vm, Chunk *bytecode)
+{
+    OpCode opCode = *(vm->ip);
+    return OP_RETURN == opCode;
 }
 
 void interpret(VirtualMachine *vm, Chunk *bytecode)
 {
-    uint64_t iterator = 0;
-    while (iterator < bytecode->count)
+    vm->ip = bytecode->code;
+
+    while (!isAtEndOfBytecode(vm, bytecode))
     {
-        OpCode opCode = bytecode->code[iterator];
+        OpCode opCode = *(vm->ip);
         if (opCode == OP_CONSTANT)
         {
-            int constantIndex = bytecode->code[iterator + 1];
-            Value constant = getConstantAt(bytecode, constantIndex);
-            push(vm, constant);
-
-            iterator = iterator + getByteLengthFor(OP_CONSTANT);
+            interpretConstant(vm, bytecode);
         }
         else if (opCode == OP_NEGATE)
         {
-            Value value = pop(vm);
-            push(vm, negate(value));
-
-            iterator = iterator + 1;
+            interpretNegate(vm, bytecode);
         }
         else if (opCode == OP_ADD)
         {
-            Value rightValue = pop(vm);
-            Value leftValue = pop(vm);
-
-            Value result = add(leftValue, rightValue);
-            push(vm, result);
-
-            iterator = iterator + getByteLengthFor(OP_ADD);
+            interpretAdd(vm, bytecode);
         }
         else if (opCode == OP_MULT)
         {
-            Value rightValue = pop(vm);
-            Value leftValue = pop(vm);
-
-            double right = unwrapNumber(rightValue);
-            double left = unwrapNumber(leftValue);
-
-            Value result = wrapNumber(left * right);
-            push(vm, result);
-
-            iterator = iterator + getByteLengthFor(opCode);
+            interpretMultiplication(vm, bytecode);
         }
         else if (opCode == OP_DIV)
         {
-            Value rightValue = pop(vm);
-            Value leftValue = pop(vm);
-
-            double right = unwrapNumber(rightValue);
-            double left = unwrapNumber(leftValue);
-            Value result = wrapNumber(left / right);
-            push(vm, result);
-
-            iterator = iterator + getByteLengthFor(opCode);
+            interpretDivision(vm, bytecode);
         }
         else if (opCode == OP_SUB)
         {
-            Value rightValue = pop(vm);
-            Value leftValue = pop(vm);
-
-            double right = unwrapNumber(rightValue);
-            double left = unwrapNumber(leftValue);
-            Value result = wrapNumber(left - right);
-            push(vm, result);
-
-            iterator = iterator + getByteLengthFor(opCode);
+            interpretSubtraction(vm, bytecode);
         }
         else if (opCode == OP_TRUE)
         {
-            Value boolean = wrapBool(true);
-            push(vm, boolean);
-            iterator = iterator + getByteLengthFor(opCode);
+            interpretTrue(vm, bytecode);
         }
         else if (opCode == OP_FALSE)
         {
-            Value boolean = wrapBool(false);
-            push(vm, boolean);
-            iterator = iterator + getByteLengthFor(opCode);
+            interpretFalse(vm, bytecode);
         }
         else if (opCode == OP_EQUAL)
         {
-            Value right = pop(vm);
-            Value left = pop(vm);
-            Value result = wrapBool(equals(left, right));
-            push(vm, result);
-            iterator = iterator + getByteLengthFor(opCode);
+            interpretEquals(vm, bytecode);
         }
-        // What a weird op code that I have defined here...
         else if (opCode == OP_STRING)
         {
-            char *chars = (char *)&bytecode->code[iterator + 1];
-
-            Value string = wrapString(chars);
-            StringObj *underlying = (StringObj *)unwrapObject(string);
-
-            push(vm, string);
-
-            iterator = iterator + 1 + underlying->length + 1;
+            interpretString(vm, bytecode);
         }
         else if (opCode == OP_PRINT)
         {
-            Value expression = pop(vm);
-            int length = snprintf(NULL, 0, "%f", unwrapNumber(expression));
-
-            char *line = malloc(sizeof(char) * length + 1);
-            snprintf(line, length + 1, "%f", unwrapNumber(expression));
-            line[length] = '\0';
-
-            vm->onStdOut(line);
-
-            iterator = iterator + 1;
+            interpretPrint(vm, bytecode);
         }
         else if (opCode == OP_VAR_DECL)
         {
-            push(vm, nil());
-            iterator = iterator + 1;
+            interpretVarDecl(vm, bytecode);
         }
         else if (opCode == OP_VAR_ASSIGN)
         {
-            uint8_t offset = bytecode->code[iterator + 1];
-            vm->stack[offset] = pop(vm);
-
-            iterator = iterator + 2;
+            interpretVarAssign(vm, bytecode);
         }
         else if (opCode == OP_VAR_EXPRESSION)
         {
-            uint8_t offset = bytecode->code[iterator + 1];
-            Value value = vm->stack[offset];
-            push(vm, value);
-
-            iterator = iterator + 2;
+            interpretVarExpression(vm, bytecode);
         }
         else if (opCode == OP_VAR_GLOBAL_DECL)
         {
-            int constantIndex = bytecode->code[iterator + 1];
-            Value constant = getConstantAt(bytecode, constantIndex);
-            StringObj* asString = (StringObj*)unwrapObject(constant);
-            hashMapPut(&vm->global, asString, nil());
-
-            iterator = iterator + 2;
+            interpretGlobalVarDecl(vm, bytecode);
         }
         else if (opCode == OP_VAR_GLOBAL_ASSIGN)
         {
-            int constantIndex = bytecode->code[iterator + 1];
-            Value constant = getConstantAt(bytecode, constantIndex);
-            StringObj* asString = (StringObj*)unwrapObject(constant);
-
-            hashMapPut(&vm->global, asString, pop(vm));
-
-            iterator = iterator + 2;
+            interpretGlobalVarAssign(vm, bytecode);
         }
         else if (opCode == OP_VAR_GLOBAL_EXPRESSION)
         {
-            int constantIndex = bytecode->code[iterator + 1];
-            Value constant = getConstantAt(bytecode, constantIndex);
-            StringObj* asString = (StringObj*)unwrapObject(constant);
-
-            push(vm, hashMapGet(&vm->global, asString));
-
-            iterator = iterator + 2;
+            interpretGlobalExpression(vm, bytecode);
         }
         else if (opCode == OP_POP)
         {
-            pop(vm);
-            iterator = iterator + 1;
+            interpretPop(vm, bytecode);
         }
         else
         {
-            iterator = iterator + 1;
+            vm->onStdOut("Invalid op code found");
+            vm->ip = vm->ip + 1;
         }
+    }
+
+    if (isAtEndOfBytecode(vm, bytecode))
+    {
+        vm->ip = vm->ip + 1;
     }
 }
 

@@ -46,7 +46,7 @@ Value getConstantAt(Chunk *chunk, int index)
 uint8_t getByteLengthFor(OpCode opCode)
 {
     uint8_t byteLength = 0;
-    if (opCode == OP_MULT || opCode == OP_ADD || opCode == OP_DIV || opCode == OP_SUB || opCode == OP_TRUE || opCode == OP_FALSE || opCode == OP_EQUAL)
+    if (opCode == OP_MULT || opCode == OP_ADD || opCode == OP_DIV || opCode == OP_SUB || opCode == OP_TRUE || opCode == OP_FALSE || opCode == OP_EQUAL || opCode == OP_NEGATE || opCode == OP_VAR_DECL)
     {
         byteLength = 1;
     }

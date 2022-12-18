@@ -6,8 +6,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-// So the parser is compiling something... that feels like
-// more of a "Compiler"?
 
 typedef struct LocationStackLocation
 {
@@ -349,6 +347,8 @@ void compile(Chunk *chunk, const char *sourceCode)
     {
         statement(&parser);
     }
+
+    writeChunk(chunk, OP_RETURN);
 }
 
 static void expression(Parser *parser)
