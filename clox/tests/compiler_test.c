@@ -29,9 +29,11 @@ void tearDown()
     freeInterpreter(&testObject);
 }
 
+// So this really isn't a good test...
+// It's testing the implementation details of the interpreter.
 void testItShouldBeAbleToCompileExpression()
 {
-    const char *sourceCode = "5";
+    const char *sourceCode = "print 5;";
     runInterpreter(&testObject, sourceCode);
     TEST_ASSERT_EQUAL(1, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("5.0", test_messages[0]);
@@ -47,7 +49,7 @@ void testItShouldCompileSingleNumberExpression()
 
     disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
 
-    TEST_ASSERT_EQUAL(2, test_messages_size);
+    TEST_ASSERT_EQUAL(3, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 5.000000\n", test_messages[1]);
 }
@@ -62,7 +64,7 @@ void testItShouldParseAddition()
 
     disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
 
-    TEST_ASSERT_EQUAL(4, test_messages_size);
+    TEST_ASSERT_EQUAL(5, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 5.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 9.000000\n", test_messages[2]);
@@ -79,7 +81,7 @@ void testItShouldParseMultiplication()
 
     disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
 
-    TEST_ASSERT_EQUAL(4, test_messages_size);
+    TEST_ASSERT_EQUAL(5, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 5.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 9.000000\n", test_messages[2]);
@@ -97,7 +99,7 @@ void testItShouldParseAdditionAndMultiplication()
 
     disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
 
-    TEST_ASSERT_EQUAL(6, test_messages_size);
+    TEST_ASSERT_EQUAL(7, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 5.000000\n", test_messages[2]);
@@ -116,7 +118,7 @@ void testItShouldParseMultiplicationExpressions()
 
     disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
 
-    TEST_ASSERT_EQUAL(8, test_messages_size);
+    TEST_ASSERT_EQUAL(9, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 5.000000\n", test_messages[2]);
@@ -137,7 +139,7 @@ void testItShouldParseNegationOfNumber()
 
     disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
 
-    TEST_ASSERT_EQUAL(3, test_messages_size);
+    TEST_ASSERT_EQUAL(4, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_NEGATE\n", test_messages[2]);
@@ -153,7 +155,7 @@ void testItShouldBeAbleParseNegationOnBothSidesOfMultiplication()
 
     disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
 
-    TEST_ASSERT_EQUAL(6, test_messages_size);
+    TEST_ASSERT_EQUAL(7, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_NEGATE\n", test_messages[2]);
@@ -172,7 +174,7 @@ void testItShouldParseBasicSubtraction()
 
     disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
 
-    TEST_ASSERT_EQUAL(4, test_messages_size);
+    TEST_ASSERT_EQUAL(5, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 5.000000\n", test_messages[2]);
@@ -188,7 +190,7 @@ void testItShouldParseDivision()
     compile(&bytecode, sourceCode);
 
     disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
-    TEST_ASSERT_EQUAL(4, test_messages_size);
+    TEST_ASSERT_EQUAL(5, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 5.000000\n", test_messages[2]);
@@ -353,12 +355,33 @@ void testItShouldRunTwoBlocksAndPrintCorrectValues()
 
 void testItShouldBeAbleToReadFromGlobalScope()
 {
-    const char* sourceCode = "var a; a = 5; print a;";
+    const char *sourceCode = "var a; a = 5; print a;";
     testObject.onStdOut = logWhenDisassemble;
     runInterpreter(&testObject, sourceCode);
 
     TEST_ASSERT_EQUAL(1, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[0]);
+}
+
+void testItShouldBeAbleToGoIntoIfConditional()
+{
+    const char *sourceCode = "{var a = true; if (a) { print 5; } print 3;}";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(2, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[0]);
+    TEST_ASSERT_EQUAL_STRING("3.000000", test_messages[1]);
+}
+
+void testItShouldBeAbleToNotGoIntoIfConditional()
+{
+    const char *sourceCode = "{var a = false; if (a) { print 5; } print 3;}";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("3.000000", test_messages[0]);
 }
 
 int main(void)
@@ -389,5 +412,7 @@ int main(void)
     RUN_TEST(testIsShouldRunWithinABlock);
     RUN_TEST(testItShouldRunTwoBlocksAndPrintCorrectValues);
     RUN_TEST(testItShouldBeAbleToReadFromGlobalScope);
+    RUN_TEST(testItShouldBeAbleToGoIntoIfConditional);
+    RUN_TEST(testItShouldBeAbleToNotGoIntoIfConditional);
     return UNITY_END();
 }

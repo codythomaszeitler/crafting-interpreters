@@ -26,6 +26,33 @@ void writeChunk(Chunk *chunk, uint8_t value)
     chunk->count++;
 }
 
+void writeShort(Chunk *chunk, uint16_t value)
+{
+    uint8_t msb = value >> 8;
+    uint8_t lsb = value;
+
+    writeChunk(chunk, msb);
+    writeChunk(chunk, lsb);
+}
+
+void overwriteShort(Chunk *chunk, int index, uint16_t value)
+{
+    uint8_t msb = value >> 8;
+    uint8_t lsb = value;
+
+    chunk->code[index] = msb;
+    chunk->code[index + 1] = lsb;
+}
+
+uint16_t readShort(Chunk *chunk, int index)
+{
+    uint8_t msb = chunk->code[index];
+    uint8_t lsb = chunk->code[index + 1];
+
+    uint16_t asShort = (msb << 8) | lsb;
+    return asShort;
+}
+
 void freeChunk(Chunk *chunk)
 {
     FREE_ARRAY(uint8_t, chunk->code, chunk->count);
@@ -46,7 +73,7 @@ Value getConstantAt(Chunk *chunk, int index)
 uint8_t getByteLengthFor(OpCode opCode)
 {
     uint8_t byteLength = 0;
-    if (opCode == OP_MULT || opCode == OP_ADD || opCode == OP_DIV || opCode == OP_SUB || opCode == OP_TRUE || opCode == OP_FALSE || opCode == OP_EQUAL)
+    if (opCode == OP_MULT || opCode == OP_ADD || opCode == OP_DIV || opCode == OP_SUB || opCode == OP_TRUE || opCode == OP_FALSE || opCode == OP_EQUAL || opCode == OP_NEGATE || opCode == OP_VAR_DECL)
     {
         byteLength = 1;
     }

@@ -6,9 +6,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-// So the parser is compiling something... that feels like
-// more of a "Compiler"?
-
 typedef struct LocationStackLocation
 {
     Token token;
@@ -37,6 +34,7 @@ static void number(Parser *);
 static void binary(Parser *);
 static void unary(Parser *);
 static void literal(Parser *);
+static void ifStatement(Parser *);
 static void expression(Parser *);
 static void parseExpression(Precedence, Parser *);
 static bool isAtEndOfStatement(Parser *);
@@ -308,6 +306,23 @@ static void blockStatement(Parser *parser)
     popToken(parser->tokens);
 }
 
+static void ifStatement(Parser *parser)
+{
+    popToken(parser->tokens);
+    popToken(parser->tokens);
+
+    expression(parser);
+
+    writeChunk(parser->compiling, OP_JUMP_IF_FALSE);
+    int currentLocation = parser->compiling->count;
+    writeShort(parser->compiling, UINT16_MAX);
+
+    popToken(parser->tokens);
+    blockStatement(parser);
+
+    overwriteShort(parser->compiling, currentLocation, parser->compiling->count);
+}
+
 static void statement(Parser *parser)
 {
     Token peeked = peekAtToken(parser->tokens);
@@ -327,6 +342,10 @@ static void statement(Parser *parser)
     else if (peeked.type == TOKEN_LEFT_BRACE)
     {
         blockStatement(parser);
+    }
+    else if (peeked.type == TOKEN_IF)
+    {
+        ifStatement(parser);
     }
     else
     {
@@ -349,6 +368,8 @@ void compile(Chunk *chunk, const char *sourceCode)
     {
         statement(&parser);
     }
+
+    writeChunk(chunk, OP_RETURN);
 }
 
 static void expression(Parser *parser)

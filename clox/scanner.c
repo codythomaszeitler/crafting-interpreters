@@ -51,6 +51,8 @@ static void string(Lexer *, TokenArray *);
 static void digit(Lexer *, TokenArray *);
 static void blockStart(Lexer *, TokenArray *);
 static void blockEnd(Lexer *, TokenArray *);
+static void leftParen(Lexer *, TokenArray *);
+static void rightParen(Lexer *, TokenArray *);
 
 TokenArray parseTokens(const char *sourceCode)
 {
@@ -112,6 +114,14 @@ TokenArray parseTokens(const char *sourceCode)
         else if (current == '}')
         {
             blockEnd(&lexer, &tokenArray);
+        }
+        else if (current == '(')
+        {
+            leftParen(&lexer, &tokenArray);
+        }
+        else if (current == ')')
+        {
+            rightParen(&lexer, &tokenArray);
         }
         else
         {
@@ -197,6 +207,14 @@ static void identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
         if (!strcmp("var", lexeme))
         {
             type = TOKEN_VAR;
+        }
+    }
+
+    if (lexemeLength == 2)
+    {
+        if (!strcmp("if", lexeme))
+        {
+            type = TOKEN_IF;
         }
     }
 
@@ -323,6 +341,16 @@ static void blockStart(Lexer *lexer, TokenArray *tokens)
 static void blockEnd(Lexer *lexer, TokenArray *tokens)
 {
     writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_RIGHT_BRACE));
+}
+
+static void leftParen(Lexer * lexer, TokenArray * tokens)
+{
+    writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_LEFT_PAREN));
+}
+
+static void rightParen(Lexer * lexer, TokenArray *tokens)
+{
+    writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_RIGHT_PAREN));
 }
 
 TokenArrayIterator tokensIterator(TokenArray array)
