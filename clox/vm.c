@@ -123,7 +123,7 @@ static void interpretString(VirtualMachine *vm, Chunk *bytecode)
 
     push(vm, string);
 
-    // It needs to be one extra for the null terminated string. 
+    // It needs to be one extra for the null terminated string.
     vm->ip = vm->ip + underlying->length + 2;
 }
 
@@ -212,85 +212,67 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
     while (!isAtEndOfBytecode(vm, bytecode))
     {
         OpCode opCode = *(vm->ip);
-        if (opCode == OP_CONSTANT)
+        switch (opCode)
         {
+        case OP_CONSTANT:
             interpretConstant(vm, bytecode);
-        }
-        else if (opCode == OP_NEGATE)
-        {
+            break;
+        case OP_NEGATE:
             interpretNegate(vm, bytecode);
-        }
-        else if (opCode == OP_ADD)
-        {
+            break;
+        case OP_ADD:
             interpretAdd(vm, bytecode);
-        }
-        else if (opCode == OP_MULT)
-        {
+            break;
+        case OP_MULT:
             interpretMultiplication(vm, bytecode);
-        }
-        else if (opCode == OP_DIV)
-        {
+            break;
+        case OP_DIV:
             interpretDivision(vm, bytecode);
-        }
-        else if (opCode == OP_SUB)
-        {
+            break;
+        case OP_SUB:
             interpretSubtraction(vm, bytecode);
-        }
-        else if (opCode == OP_TRUE)
-        {
+            break;
+        case OP_TRUE:
             interpretTrue(vm, bytecode);
-        }
-        else if (opCode == OP_FALSE)
-        {
+            break;
+        case OP_FALSE:
             interpretFalse(vm, bytecode);
-        }
-        else if (opCode == OP_EQUAL)
-        {
+            break;
+        case OP_EQUAL:
             interpretEquals(vm, bytecode);
-        }
-        else if (opCode == OP_STRING)
-        {
+            break;
+        case OP_STRING:
             interpretString(vm, bytecode);
-        }
-        else if (opCode == OP_PRINT)
-        {
+            break;
+        case OP_PRINT:
             interpretPrint(vm, bytecode);
-        }
-        else if (opCode == OP_VAR_DECL)
-        {
+            break;
+        case OP_VAR_DECL:
             interpretVarDecl(vm, bytecode);
-        }
-        else if (opCode == OP_VAR_ASSIGN)
-        {
+            break;
+        case OP_VAR_ASSIGN:
             interpretVarAssign(vm, bytecode);
-        }
-        else if (opCode == OP_VAR_EXPRESSION)
-        {
+            break;
+        case OP_VAR_EXPRESSION:
             interpretVarExpression(vm, bytecode);
-        }
-        else if (opCode == OP_VAR_GLOBAL_DECL)
-        {
+            break;
+        case OP_VAR_GLOBAL_DECL:
             interpretGlobalVarDecl(vm, bytecode);
-        }
-        else if (opCode == OP_VAR_GLOBAL_ASSIGN)
-        {
+            break;
+        case OP_VAR_GLOBAL_ASSIGN:
             interpretGlobalVarAssign(vm, bytecode);
-        }
-        else if (opCode == OP_VAR_GLOBAL_EXPRESSION)
-        {
+            break;
+        case OP_VAR_GLOBAL_EXPRESSION:
             interpretGlobalExpression(vm, bytecode);
-        }
-        else if (opCode == OP_POP)
-        {
+            break;
+        case OP_POP:
             interpretPop(vm, bytecode);
-        }
-        else
-        {
-            vm->onStdOut("Invalid op code found");
-            vm->ip = vm->ip + 1;
+            break;
+        default:
+            printf("Invalid op code.");
+            break;
         }
     }
-
     if (isAtEndOfBytecode(vm, bytecode))
     {
         vm->ip = vm->ip + 1;
