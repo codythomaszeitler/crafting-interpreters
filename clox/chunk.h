@@ -25,6 +25,7 @@ typedef enum {
     OP_VAR_GLOBAL_ASSIGN,
     OP_VAR_GLOBAL_EXPRESSION,
     OP_JUMP_IF_FALSE,
+    OP_JUMP,
     OP_LOOP,
     OP_LESS_THAN
 } OpCode;

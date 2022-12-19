@@ -218,6 +218,11 @@ static void identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
         {
             type = TOKEN_VAR;
         }
+
+        if (!strcmp("for", lexeme))
+        {
+            type = TOKEN_FOR;
+        }
     }
 
     if (lexemeLength == 2)

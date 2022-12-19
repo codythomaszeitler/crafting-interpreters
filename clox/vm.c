@@ -236,6 +236,14 @@ static void interpretLoop(VirtualMachine *vm, Chunk *bytecode)
     vm->ip = vm->ip - (jumpOffset);
 }
 
+static void interpretJump(VirtualMachine *vm, Chunk *bytecode)
+{
+    uint8_t msb = *(vm->ip + 1);
+    uint8_t lsb = *(vm->ip + 2);
+    uint16_t jumpLocation = (msb << 8) | lsb;
+    vm->ip = &bytecode->code[jumpLocation];
+}
+
 static bool isAtEndOfBytecode(VirtualMachine *vm, Chunk *bytecode)
 {
     OpCode opCode = *(vm->ip);
@@ -313,6 +321,9 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
             break;
         case OP_LOOP:
             interpretLoop(vm, bytecode);
+            break;
+        case OP_JUMP:
+            interpretJump(vm, bytecode);
             break;
         default:
             printf("Invalid op code.");

@@ -290,11 +290,30 @@ static void variableAssignment(Parser *parser)
     popToken(parser->tokens);
 }
 
+static void blockStart(Parser *parser)
+{
+    parser->blockDepth++;
+}
+
+static void blockEnd(Parser *parser, int stackDepthStart)
+{
+    parser->blockDepth--;
+    parser->stackDepth = stackDepthStart;
+}
+
+static void releaseLocals(Parser *parser, int numLocals)
+{
+    for (int i = 0; i < numLocals; i++)
+    {
+        writeChunk(parser->compiling, OP_POP);
+    }
+}
+
 static void blockStatement(Parser *parser)
 {
     popToken(parser->tokens);
 
-    parser->blockDepth++;
+    blockStart(parser);
     int stackDepthStart = parser->stackDepth;
     while (peekAtToken(parser->tokens).type != TOKEN_RIGHT_BRACE)
     {
@@ -302,13 +321,9 @@ static void blockStatement(Parser *parser)
     }
 
     int numLocals = parser->stackDepth - stackDepthStart;
-    for (int i = 0; i < numLocals; i++)
-    {
-        writeChunk(parser->compiling, OP_POP);
-    }
+    releaseLocals(parser, numLocals);
 
-    parser->stackDepth = stackDepthStart;
-    parser->blockDepth--;
+    blockEnd(parser, stackDepthStart);
     popToken(parser->tokens);
 }
 
@@ -350,7 +365,100 @@ static void whileStatement(Parser *parser)
     writeChunk(parser->compiling, OP_LOOP);
     writeChunk(parser->compiling, blockLength);
 
-    overwriteShort(parser->compiling, jumpIfFalseLocation, parser->compiling->count );
+    overwriteShort(parser->compiling, jumpIfFalseLocation, parser->compiling->count);
+}
+
+static void compileInitStatements(Parser *parser)
+{
+    Token varDeclOrSemicolon = peekAtToken(parser->tokens);
+    // Can either be var or semicolon
+    if (varDeclOrSemicolon.type == TOKEN_VAR)
+    {
+        variableDecl(parser);
+    }
+    else
+    {
+        popToken(parser->tokens);
+    }
+}
+
+static int compileExpressionStatement(Parser *parser)
+{
+    int startOfIterablePortion = parser->compiling->count + 1;
+    expression(parser);
+
+    popToken(parser->tokens); // ; that ends the expression?
+
+    return startOfIterablePortion;
+}
+
+static int writeEmptyIfFalseJumpStatement(Parser *parser)
+{
+    writeChunk(parser->compiling, OP_JUMP_IF_FALSE);
+    int jumpIfFalseLocation = parser->compiling->count;
+    writeShort(parser->compiling, UINT16_MAX);
+
+    return jumpIfFalseLocation;
+}
+
+static int writeEmptyJumpStatement(Parser *parser)
+{
+    writeChunk(parser->compiling, OP_JUMP);
+    int forLoopUpdateLocation = parser->compiling->count;
+    writeShort(parser->compiling, UINT16_MAX);
+    return forLoopUpdateLocation;
+}
+
+static int compileUpdateStatements(Parser *parser, int startOfExpressionLocation)
+{
+    int startOfCompileUpdateStatements = parser->compiling->count;
+    Token varAssignOrSemicolon = peekAtToken(parser->tokens);
+    if (varAssignOrSemicolon.type == TOKEN_IDENTIFIER)
+    {
+        variableAssignment(parser);
+    }
+    else
+    {
+        popToken(parser->tokens);
+    }
+
+    int jumpOffset = parser->compiling->count - startOfExpressionLocation + 1;
+    writeChunk(parser->compiling, OP_LOOP);
+    writeChunk(parser->compiling, jumpOffset);
+
+    return startOfCompileUpdateStatements;
+}
+
+static void forStatement(Parser *parser)
+{
+    blockStart(parser);
+    int stackDepthStart = parser->stackDepth;
+
+    popToken(parser->tokens); // should have been for
+    popToken(parser->tokens); // should have been (
+
+    compileInitStatements(parser);
+
+    int startOfIterablePortion = compileExpressionStatement(parser);
+    int jumpIfFalseValueLocation = writeEmptyIfFalseJumpStatement(parser);
+    int expressionToBodyJumpLocation = writeEmptyJumpStatement(parser);
+
+    int startOfUpdateStatements = compileUpdateStatements(parser, startOfIterablePortion);
+
+    overwriteShort(parser->compiling, expressionToBodyJumpLocation, parser->compiling->count);
+
+    popToken(parser->tokens); // should have been a )
+
+    blockStatement(parser);
+
+    int blockLength = parser->compiling->count - startOfUpdateStatements;
+
+    writeChunk(parser->compiling, OP_LOOP);
+    writeChunk(parser->compiling, blockLength);
+
+    blockEnd(parser, stackDepthStart);
+
+    overwriteShort(parser->compiling, jumpIfFalseValueLocation, parser->compiling->count);
 }
 
 static void statement(Parser *parser)
@@ -380,6 +488,10 @@ static void statement(Parser *parser)
     else if (peeked.type == TOKEN_WHILE)
     {
         whileStatement(parser);
+    }
+    else if (peeked.type == TOKEN_FOR)
+    {
+        forStatement(parser);
     }
     else
     {
