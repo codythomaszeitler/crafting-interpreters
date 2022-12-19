@@ -24,7 +24,9 @@ typedef enum {
     OP_VAR_GLOBAL_DECL,
     OP_VAR_GLOBAL_ASSIGN,
     OP_VAR_GLOBAL_EXPRESSION,
-    OP_JUMP_IF_FALSE
+    OP_JUMP_IF_FALSE,
+    OP_LOOP,
+    OP_LESS_THAN
 } OpCode;
 
 uint8_t getByteLengthFor(OpCode opCode);

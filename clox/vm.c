@@ -114,6 +114,19 @@ static void interpretEquals(VirtualMachine *vm, Chunk *bytecode)
     vm->ip = vm->ip + getByteLengthFor(OP_EQUAL);
 }
 
+static void interpretLessThan(VirtualMachine *vm, Chunk *bytecode)
+{
+    Value rightValue = pop(vm);
+    Value leftValue = pop(vm);
+
+    double right = unwrapNumber(rightValue);
+    double left = unwrapNumber(leftValue);
+    Value result = wrapBool(left < right);
+    push(vm, result);
+
+    vm->ip = vm->ip + getByteLengthFor(OP_LESS_THAN);
+}
+
 static void interpretString(VirtualMachine *vm, Chunk *bytecode)
 {
     char *chars = (char *)(vm->ip + 1);
@@ -217,6 +230,12 @@ static void interpretJumpIfFalse(VirtualMachine *vm, Chunk *bytecode)
     }
 }
 
+static void interpretLoop(VirtualMachine *vm, Chunk *bytecode)
+{
+    uint8_t jumpOffset = *(vm->ip + 1);
+    vm->ip = vm->ip - (jumpOffset);
+}
+
 static bool isAtEndOfBytecode(VirtualMachine *vm, Chunk *bytecode)
 {
     OpCode opCode = *(vm->ip);
@@ -249,6 +268,9 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
             break;
         case OP_SUB:
             interpretSubtraction(vm, bytecode);
+            break;
+        case OP_LESS_THAN:
+            interpretLessThan(vm, bytecode);
             break;
         case OP_TRUE:
             interpretTrue(vm, bytecode);
@@ -288,6 +310,9 @@ void interpret(VirtualMachine *vm, Chunk *bytecode)
             break;
         case OP_JUMP_IF_FALSE:
             interpretJumpIfFalse(vm, bytecode);
+            break;
+        case OP_LOOP:
+            interpretLoop(vm, bytecode);
             break;
         default:
             printf("Invalid op code.");

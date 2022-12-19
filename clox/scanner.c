@@ -53,6 +53,7 @@ static void blockStart(Lexer *, TokenArray *);
 static void blockEnd(Lexer *, TokenArray *);
 static void leftParen(Lexer *, TokenArray *);
 static void rightParen(Lexer *, TokenArray *);
+static void lessThan(Lexer *, TokenArray *);
 
 TokenArray parseTokens(const char *sourceCode)
 {
@@ -123,6 +124,10 @@ TokenArray parseTokens(const char *sourceCode)
         {
             rightParen(&lexer, &tokenArray);
         }
+        else if (current == '<')
+        {
+            lessThan(&lexer, &tokenArray);
+        }
         else
         {
             printf("%c was not supported by parse tokens\n", current);
@@ -191,6 +196,11 @@ static void identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
         if (!strcmp("false", lexeme))
         {
             type = TOKEN_FALSE;
+        }
+
+        if (!strcmp("while", lexeme))
+        {
+            type = TOKEN_WHILE;
         }
     }
 
@@ -343,14 +353,19 @@ static void blockEnd(Lexer *lexer, TokenArray *tokens)
     writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_RIGHT_BRACE));
 }
 
-static void leftParen(Lexer * lexer, TokenArray * tokens)
+static void leftParen(Lexer *lexer, TokenArray *tokens)
 {
     writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_LEFT_PAREN));
 }
 
-static void rightParen(Lexer * lexer, TokenArray *tokens)
+static void rightParen(Lexer *lexer, TokenArray *tokens)
 {
     writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_RIGHT_PAREN));
+}
+
+static void lessThan(Lexer *lexer, TokenArray *tokens)
+{
+    writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_LESS));
 }
 
 TokenArrayIterator tokensIterator(TokenArray array)
