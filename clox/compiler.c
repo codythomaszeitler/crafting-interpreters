@@ -38,6 +38,7 @@ static void ifStatement(Parser *);
 static void expression(Parser *);
 static void parseExpression(Precedence, Parser *);
 static bool isAtEndOfStatement(Parser *);
+static bool isAtEndOfConditional(Parser *parser);
 static bool isGlobalBinding(Parser *, Token);
 static uint8_t getVariableBinding(Parser *, Token);
 static int getVariableBindingAsInt(Parser *parser, Token token);
@@ -48,6 +49,7 @@ ParseRule rules[] = {
     [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
     [TOKEN_MINUS] = {unary, binary, PREC_UNARY},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
+    [TOKEN_LESS] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_BANG_EQUAL] = {NULL, binary, PREC_EQUALITY},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
@@ -129,6 +131,10 @@ static void binary(Parser *parser)
     else if (operator.type == TOKEN_SLASH)
     {
         writeChunk(parser->compiling, OP_DIV);
+    }
+    else if (operator.type == TOKEN_LESS)
+    {
+        writeChunk(parser->compiling, OP_LESS_THAN);
     }
     else if (operator.type == TOKEN_BANG_EQUAL)
     {
@@ -323,6 +329,30 @@ static void ifStatement(Parser *parser)
     overwriteShort(parser->compiling, currentLocation, parser->compiling->count);
 }
 
+static void whileStatement(Parser *parser)
+{
+    popToken(parser->tokens); // popping while
+    popToken(parser->tokens); // popping (
+
+    int startOfWhileExpression = parser->compiling->count + 1;
+    expression(parser);
+
+    popToken(parser->tokens); // popping )
+
+    writeChunk(parser->compiling, OP_JUMP_IF_FALSE);
+    int jumpIfFalseLocation = parser->compiling->count;
+    writeShort(parser->compiling, UINT16_MAX);
+
+    blockStatement(parser);
+
+    int blockLength = parser->compiling->count - startOfWhileExpression + 1;
+
+    writeChunk(parser->compiling, OP_LOOP);
+    writeChunk(parser->compiling, blockLength);
+
+    overwriteShort(parser->compiling, jumpIfFalseLocation, parser->compiling->count );
+}
+
 static void statement(Parser *parser)
 {
     Token peeked = peekAtToken(parser->tokens);
@@ -346,6 +376,10 @@ static void statement(Parser *parser)
     else if (peeked.type == TOKEN_IF)
     {
         ifStatement(parser);
+    }
+    else if (peeked.type == TOKEN_WHILE)
+    {
+        whileStatement(parser);
     }
     else
     {
@@ -386,7 +420,7 @@ static void parseExpression(Precedence precedence, Parser *parser)
 
     Token maybeInfixToken = peekAtToken(parser->tokens);
     ParseRule *infixParseRule = getRule(maybeInfixToken.type);
-    while (hasNextToken(parser->tokens) && !isAtEndOfStatement(parser) && precedence <= infixParseRule->Precedence)
+    while (hasNextToken(parser->tokens) && !isAtEndOfStatement(parser) && !isAtEndOfConditional(parser) && precedence <= infixParseRule->Precedence)
     {
         ParseFn infixFunction = getRule(maybeInfixToken.type)->infix;
         infixFunction(parser);
@@ -397,4 +431,9 @@ static void parseExpression(Precedence precedence, Parser *parser)
 static bool isAtEndOfStatement(Parser *parser)
 {
     return peekAtToken(parser->tokens).type == TOKEN_SEMICOLON;
+}
+
+static bool isAtEndOfConditional(Parser *parser)
+{
+    return peekAtToken(parser->tokens).type == TOKEN_RIGHT_PAREN;
 }

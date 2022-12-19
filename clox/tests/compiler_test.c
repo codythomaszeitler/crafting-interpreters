@@ -384,6 +384,18 @@ void testItShouldBeAbleToNotGoIntoIfConditional()
     TEST_ASSERT_EQUAL_STRING("3.000000", test_messages[0]);
 }
 
+void testIfShouldBeAbleToGoThroughWhileLoop()
+{
+    const char *sourceCode = "{var a = 0; while (a < 3) {print a; a = a + 1;}}";
+    testObject.onStdOut = logWhenDisassemble;
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(3, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("0.000000", test_messages[0]);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[1]);
+    TEST_ASSERT_EQUAL_STRING("2.000000", test_messages[2]);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -414,5 +426,6 @@ int main(void)
     RUN_TEST(testItShouldBeAbleToReadFromGlobalScope);
     RUN_TEST(testItShouldBeAbleToGoIntoIfConditional);
     RUN_TEST(testItShouldBeAbleToNotGoIntoIfConditional);
+    RUN_TEST(testIfShouldBeAbleToGoThroughWhileLoop);
     return UNITY_END();
 }
