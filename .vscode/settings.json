@@ -8,7 +8,13 @@
         "compiler.h": "c",
         "cstdint": "c",
         "vm.h": "c",
-        "unity.h": "c"
+        "unity.h": "c",
+        "cmath": "c",
+        "compare": "c",
+        "concepts": "c",
+        "limits": "c",
+        "new": "c",
+        "typeinfo": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled"
 }

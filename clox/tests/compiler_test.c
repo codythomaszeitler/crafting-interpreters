@@ -22,15 +22,18 @@ void setUp()
 {
     initInterpreter(&testObject);
     test_messages_size = 0;
+    testObject.onStdOut = logWhenDisassemble;
 }
 
 void tearDown()
 {
     freeInterpreter(&testObject);
+    for (int i = 0; i < test_messages_size; i++) 
+    {
+        free(test_messages[i]);
+    }
 }
 
-// So this really isn't a good test...
-// It's testing the implementation details of the interpreter.
 void testItShouldBeAbleToCompileExpression()
 {
     const char *sourceCode = "print 5;";
@@ -201,85 +204,76 @@ void testItShouldParseDivision()
 
 void testItShouldRunBasicAddition()
 {
-    const char *sourceCode = "3 + 5";
-
-    Interpreter testObject;
-    initInterpreter(&testObject);
+    const char *sourceCode = "print 3 + 5;";
 
     runInterpreter(&testObject, sourceCode);
 
-    Value calculated = peek(&testObject.vm);
-    TEST_ASSERT_EQUAL(8, unwrapNumber(calculated));
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("8.000000", test_messages[0]);
 }
 
 void testItShouldDoComplexAdditionAndMultiplication()
 {
-    const char *sourceCode = "5 + 3 * 5 + 4 + 5 * 8";
-
-    Interpreter testObject;
-    initInterpreter(&testObject);
+    const char *sourceCode = "print 5 + 3 * 5 + 4 + 5 * 8;";
 
     runInterpreter(&testObject, sourceCode);
 
-    Value calculated = peek(&testObject.vm);
-    TEST_ASSERT_EQUAL(64, unwrapNumber(calculated));
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("64.000000", test_messages[0]);
 }
 
 void testItShouldDoComplexAdditionAndMultiplicationAndDivision()
 {
-    const char *sourceCode = "5 + 3 * 5 + 4 + 5 * 8 / 4";
+    const char *sourceCode = "print 5 + 3 * 5 + 4 + 5 * 8 / 4;";
     runInterpreter(&testObject, sourceCode);
 
-    Value calculated = peek(&testObject.vm);
-    TEST_ASSERT_EQUAL(34, unwrapNumber(calculated));
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("34.000000", test_messages[0]);
 }
 
 void testItShouldPopTrueOntoTopOfStack()
 {
-    const char *sourceCode = "true";
+    const char *sourceCode = "print true;";
     runInterpreter(&testObject, sourceCode);
-    Value shouldBeTrue = peek(&testObject.vm);
-    bool boolean = unwrapBool(shouldBeTrue);
-    TEST_ASSERT_TRUE(boolean);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("true", test_messages[0]);
 }
 
 void testItShouldPopFalseOntoTopOfStack()
 {
-    const char *sourceCode = "false";
+    const char *sourceCode = "print false;";
     runInterpreter(&testObject, sourceCode);
-    Value shouldBeTrue = peek(&testObject.vm);
-    bool boolean = unwrapBool(shouldBeTrue);
-    TEST_ASSERT_FALSE(boolean);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("false", test_messages[0]);
 }
 
 void testItShouldDoEqualityBetweenTrueAndFalse()
 {
-    const char *sourceCode = "false != true";
+    const char *sourceCode = "print false != true;";
     runInterpreter(&testObject, sourceCode);
-    Value shouldBeTrue = peek(&testObject.vm);
-    bool boolean = unwrapBool(shouldBeTrue);
-    TEST_ASSERT_TRUE(boolean);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("true", test_messages[0]);
 }
 
 void testItShouldPutStringOntoStack()
 {
-    const char *sourceCode = "\"cody is cool\"";
+    const char *sourceCode = "print \"cody is cool\";";
     runInterpreter(&testObject, sourceCode);
 
-    Value heapStringPointer = peek(&testObject.vm);
-    StringObj *stringObj = (StringObj *)unwrapObject(heapStringPointer);
-
-    TEST_ASSERT_EQUAL_STRING(stringObj->chars, "cody is cool");
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("cody is cool", test_messages[0]);
 }
 
 void testItShouldConcatStrings()
 {
-    const char *sourceCode = "\"a\" + \"b\"";
+    const char *sourceCode = "print \"a\" + \"b\";";
     runInterpreter(&testObject, sourceCode);
 
-    Value heapStringPointer = peek(&testObject.vm);
-    StringObj *stringObj = (StringObj *)unwrapObject(heapStringPointer);
-    TEST_ASSERT_EQUAL_STRING("ab", stringObj->chars);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("ab", test_messages[0]);
 }
 
 void testItShouldPrintSimpleExpression()

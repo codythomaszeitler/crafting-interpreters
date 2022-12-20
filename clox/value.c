@@ -152,7 +152,7 @@ Value add(Value leftValue, Value rightValue)
         concatenated[length] = '\0';
 
         StringObj* concat = malloc(sizeof(StringObj));
-        concat->type.type = 1;
+        concat->type.type = ObjString;
         concat->length = length;
         concat->chars = concatenated;
 

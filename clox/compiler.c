@@ -156,6 +156,7 @@ static void unary(Parser *parser)
 void initInterpreter(Interpreter *interpreter)
 {
     initVirtualMachine(&interpreter->vm);
+    interpreter->onStdOut = NULL;
 }
 
 void freeInterpreter(Interpreter *interpreter)

@@ -142,14 +142,36 @@ static void interpretString(VirtualMachine *vm, Chunk *bytecode)
 
 static void interpretPrint(VirtualMachine *vm, Chunk *bytecode)
 {
+    char *line = NULL;
+
     Value expression = pop(vm);
-    int length = snprintf(NULL, 0, "%f", unwrapNumber(expression));
+    if (isNumber(expression))
+    {
+        int length = snprintf(NULL, 0, "%f", unwrapNumber(expression));
+        line = malloc(sizeof(char) * length + 1);
+        snprintf(line, length + 1, "%f", unwrapNumber(expression));
+        line[length] = '\0';
+    }
+    else if (isBool(expression))
+    {
+        bool asBool = unwrapBool(expression);
+        int length = snprintf(NULL, 0, "%s", asBool ? "true" : "false");
+        line = malloc(sizeof(char) * length + 1);
+        snprintf(line, length + 1, "%s", asBool ? "true" : "false");
+        line[length] = '\0';
+    }
+    else if (isStringObj(expression))
+    {
+        StringObj* unwrapped = (StringObj*)unwrapObject(expression);
+        int length = snprintf(NULL, 0, "%s", unwrapped->chars);
+        line = malloc(sizeof(char) * length + 1);
+        snprintf(line, length + 1, "%s", unwrapped->chars);
+    }
 
-    char *line = malloc(sizeof(char) * length + 1);
-    snprintf(line, length + 1, "%f", unwrapNumber(expression));
-    line[length] = '\0';
-
-    vm->onStdOut(line);
+    if (vm->onStdOut != NULL)
+    {
+        vm->onStdOut(line);
+    }
     vm->ip = vm->ip + 1;
 }
 
