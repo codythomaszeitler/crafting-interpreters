@@ -12,6 +12,7 @@ typedef struct StringObj {
 
 StringObj* asString(const char *);
 Value wrapString(const char*);
+bool isStringObj(Value);
 
 void freeStringObj(StringObj*);
 

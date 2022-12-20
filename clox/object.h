@@ -1,8 +1,12 @@
 #ifndef OBJECT_HEADER
 #define OBJECT_HEADER
 
+typedef enum ObjType {
+    ObjString
+} ObjType;
+
 typedef struct Obj {
-    int type;
+    ObjType type;
 } Obj;
 
 #endif
