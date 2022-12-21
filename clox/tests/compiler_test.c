@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include "value.h"
 #include "cloxstring.h"
+#include "functionobj.h"
 
 Interpreter testObject;
 
@@ -18,6 +19,17 @@ static void logWhenDisassemble(char *message)
     test_messages_size++;
 }
 
+static void disassembleTest(const char *sourceCode)
+{
+    FunctionObj function;
+    initFunctionObj(&function);
+
+    TokenArrayIterator tokens = tokenize(sourceCode);
+    compile(&function, &tokens);
+
+    disassembleChunk(function.bytecode, "test chunk", logWhenDisassemble);
+}
+
 void setUp()
 {
     initInterpreter(&testObject);
@@ -28,7 +40,7 @@ void setUp()
 void tearDown()
 {
     freeInterpreter(&testObject);
-    for (int i = 0; i < test_messages_size; i++) 
+    for (int i = 0; i < test_messages_size; i++)
     {
         free(test_messages[i]);
     }
@@ -46,11 +58,7 @@ void testItShouldCompileSingleNumberExpression()
 {
     const char *sourceCode = "5";
 
-    Chunk bytecode;
-    initChunk(&bytecode);
-    compile(&bytecode, sourceCode);
-
-    disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
+    disassembleTest(sourceCode);
 
     TEST_ASSERT_EQUAL(3, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
@@ -61,11 +69,7 @@ void testItShouldParseAddition()
 {
     const char *sourceCode = "5 + 9";
 
-    Chunk bytecode;
-    initChunk(&bytecode);
-    compile(&bytecode, sourceCode);
-
-    disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
+    disassembleTest(sourceCode);
 
     TEST_ASSERT_EQUAL(5, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
@@ -78,11 +82,7 @@ void testItShouldParseMultiplication()
 {
     const char *sourceCode = "5 * 9";
 
-    Chunk bytecode;
-    initChunk(&bytecode);
-    compile(&bytecode, sourceCode);
-
-    disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
+    disassembleTest(sourceCode);
 
     TEST_ASSERT_EQUAL(5, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
@@ -96,11 +96,7 @@ void testItShouldParseAdditionAndMultiplication()
     const char *sourceCode = "3 + 5 * 9";
     // 3 + ((5 * 9) * 10)
 
-    Chunk bytecode;
-    initChunk(&bytecode);
-    compile(&bytecode, sourceCode);
-
-    disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
+    disassembleTest(sourceCode);
 
     TEST_ASSERT_EQUAL(7, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
@@ -115,11 +111,7 @@ void testItShouldParseMultiplicationExpressions()
 {
     const char *sourceCode = "3 + 5 * 9 * 8";
 
-    Chunk bytecode;
-    initChunk(&bytecode);
-    compile(&bytecode, sourceCode);
-
-    disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
+    disassembleTest(sourceCode);
 
     TEST_ASSERT_EQUAL(9, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
@@ -136,11 +128,7 @@ void testItShouldParseNegationOfNumber()
 {
     const char *sourceCode = "-3";
 
-    Chunk bytecode;
-    initChunk(&bytecode);
-    compile(&bytecode, sourceCode);
-
-    disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
+    disassembleTest(sourceCode);
 
     TEST_ASSERT_EQUAL(4, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
@@ -152,11 +140,7 @@ void testItShouldBeAbleParseNegationOnBothSidesOfMultiplication()
 {
     const char *sourceCode = "-3 * -5";
 
-    Chunk bytecode;
-    initChunk(&bytecode);
-    compile(&bytecode, sourceCode);
-
-    disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
+    disassembleTest(sourceCode);
 
     TEST_ASSERT_EQUAL(7, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
@@ -171,11 +155,7 @@ void testItShouldParseBasicSubtraction()
 {
     const char *sourceCode = "3 - 5";
 
-    Chunk bytecode;
-    initChunk(&bytecode);
-    compile(&bytecode, sourceCode);
-
-    disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
+    disassembleTest(sourceCode);
 
     TEST_ASSERT_EQUAL(5, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
@@ -188,18 +168,13 @@ void testItShouldParseDivision()
 {
     const char *sourceCode = "3 / 5";
 
-    Chunk bytecode;
-    initChunk(&bytecode);
-    compile(&bytecode, sourceCode);
+    disassembleTest(sourceCode);
 
-    disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
     TEST_ASSERT_EQUAL(5, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 5.000000\n", test_messages[2]);
     TEST_ASSERT_EQUAL_STRING("0004 OP_DIV\n", test_messages[3]);
-
-    freeChunk(&bytecode);
 }
 
 void testItShouldRunBasicAddition()
@@ -402,6 +377,43 @@ void testItShouldBeAbleToGoThroughForLoop()
     TEST_ASSERT_EQUAL_STRING("2.000000", test_messages[2]);
 }
 
+void testItShouldBeAbleToDefineAndUseFunction()
+{
+    const char *sourceCode = "{ func foo() {print 5;} foo(); }";
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[0]);
+}
+
+void testItShouldRunWithFunctionArgumentNoReturnValue()
+{
+    const char *sourceCode = "{ func foo(a) {print a;} foo(5); }";
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[0]);
+}
+
+void testItShouldRunWithFunctionArgumentWithReturnValue()
+{
+    const char *sourceCode = "{ func foo(a) {return a + 1;} var b = foo(5); print b;}";
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("6.000000", test_messages[0]);
+}
+
+void testItShouldReturnNilWhenNoReturnGiven() 
+{
+    const char *sourceCode = "{ func foo(a) {print a;} var b = foo(5); print b;}";
+    runInterpreter(&testObject, sourceCode);
+
+    TEST_ASSERT_EQUAL(2, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[0]);
+    TEST_ASSERT_EQUAL_STRING("nil", test_messages[1]);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -434,5 +446,9 @@ int main(void)
     RUN_TEST(testItShouldBeAbleToNotGoIntoIfConditional);
     RUN_TEST(testItShouldBeAbleToGoThroughWhileLoop);
     RUN_TEST(testItShouldBeAbleToGoThroughForLoop);
+    RUN_TEST(testItShouldBeAbleToDefineAndUseFunction);
+    RUN_TEST(testItShouldRunWithFunctionArgumentNoReturnValue);
+    RUN_TEST(testItShouldRunWithFunctionArgumentWithReturnValue);
+    RUN_TEST(testItShouldReturnNilWhenNoReturnGiven);
     return UNITY_END();
 }
