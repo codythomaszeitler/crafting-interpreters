@@ -371,6 +371,39 @@ static void interpretReturn(VirtualMachine *vm)
     currentFrame->sp = NULL;
 }
 
+static void interpretOr(VirtualMachine *vm)
+{
+    CallFrame *currentFrame = getCurrentFrame(vm);
+
+    Value right = pop(vm);
+    Value left = pop(vm);
+
+    bool rightBool = unwrapBool(right);
+    bool leftBool = unwrapBool(left);
+
+    bool resultBool = leftBool || rightBool;
+    Value result = wrapBool(resultBool);
+    push(vm, result);
+
+    currentFrame->ip = currentFrame->ip + 1;
+}
+
+static void interpretLessThanOrEquals(VirtualMachine *vm) 
+{
+    CallFrame *currentFrame = getCurrentFrame(vm);
+
+    Value right = pop(vm);
+    Value left = pop(vm);
+
+    double rightNum = unwrapNumber(right);
+    double leftNum = unwrapNumber(left);
+
+    Value result = wrapBool(leftNum <= rightNum);
+    push(vm, result);
+
+    currentFrame->ip = currentFrame->ip + 1;
+}
+
 static bool isAtEndOfBytecode(VirtualMachine *vm)
 {
     OpCode opCode = *(vm->frames[vm->fp].ip);
@@ -455,6 +488,12 @@ void interpret(VirtualMachine *vm)
             break;
         case OP_RETURN:
             interpretReturn(vm);
+            break;
+        case OP_OR:
+            interpretOr(vm);
+            break;
+        case OP_LESS_THAN_EQUALS:
+            interpretLessThanOrEquals(vm);
             break;
         default:
             printf("Invalid op code.");

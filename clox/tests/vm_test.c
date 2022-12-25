@@ -298,46 +298,96 @@ void testItShouldBeAbleToDoFunctionCallsWithinExpression()
 
 void testItShouldHaveTwoReturnsInFunction()
 {
-    const char *sourceCode = "{func foo(a) { if (a <= 1) {return a;} return a + 1;} var c = foo(2); print c;";
+    const char *sourceCode = "{func foo(a) { if (a <= 1) {return a;} return a + 1;} var c = foo(2); print c;}";
     runInterpreter(&testObject, sourceCode);
     TEST_ASSERT_EQUAL(1, test_messages_size);
-    TEST_ASSERT_EQUAL_STRING("2.000000", test_messages[0]);
+    TEST_ASSERT_EQUAL_STRING("3.000000", test_messages[0]);
 }
-// const char *sourceCode = "func fib(n) { if (n <= 1) {return n;} return fib (n - 2) + fib(n - 1);} print fib(9);";
-// runInterpreter(&testObject, sourceCode);
-// TEST_ASSERT_EQUAL(1, test_messages_size);
-// TEST_ASSERT_EQUAL_STRING("34.000000", test_messages[0]);
+
+void testItShouldGoToBaseCase()
+{
+    const char *sourceCode = "{func foo(a) { if (a <= 1) {return a;} return a + 1;} var c = foo(1); print c;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoOrStatement()
+{
+    const char *sourceCode = "{ var a = true || false; print a;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("true", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoLessThanOrEqualsTo()
+{
+    const char *sourceCode = "{ var a = 2 <= 5; print a;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("true", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoLessThanOrEqualsToSameNum()
+{
+    const char *sourceCode = "{ var a = 5 <= 5; print a;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("true", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoLessThanOrEqualsToWhereLeftIsGreater()
+{
+    const char *sourceCode = "{ var a = 6 <= 5; print a;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("false", test_messages[0]);
+}
+
+void testItShouldDoFibNumbers()
+{
+    const char *sourceCode = "{func fib(n) { if (n <= 1) {return n;} return fib (n - 2) + fib(n - 1);} print fib(2);}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("34.000000", test_messages[0]);
+}
 
 int main(void)
 {
     UNITY_BEGIN();
-    RUN_TEST(testItShouldRunBasicAddition);
-    RUN_TEST(testItShouldDoComplexAdditionAndMultiplication);
-    RUN_TEST(testItShouldDoComplexAdditionAndMultiplicationAndDivision);
-    RUN_TEST(testItShouldPopTrueOntoTopOfStack);
-    RUN_TEST(testItShouldPopFalseOntoTopOfStack);
-    RUN_TEST(testItShouldDoEqualityBetweenTrueAndFalse);
-    RUN_TEST(testItShouldPutStringOntoStack);
-    RUN_TEST(testItShouldConcatStrings);
-    RUN_TEST(testItShouldPrintSimpleExpression);
-    RUN_TEST(testItShouldDoSimpleAssignmentAndPrint);
-    RUN_TEST(testItShouldDoSimpleAdditionWithAssignment);
-    RUN_TEST(testItShouldDoAssignmentWithDecl);
-    RUN_TEST(testItShouldDoComplexExpressionInDecl);
-    RUN_TEST(testIsShouldRunWithinABlock);
-    RUN_TEST(testItShouldRunTwoBlocksAndPrintCorrectValues);
-    RUN_TEST(testItShouldBeAbleToReadFromGlobalScope);
-    RUN_TEST(testItShouldBeAbleToGoIntoIfConditional);
-    RUN_TEST(testItShouldBeAbleToNotGoIntoIfConditional);
-    RUN_TEST(testItShouldBeAbleToGoThroughWhileLoop);
-    RUN_TEST(testItShouldBeAbleToGoThroughForLoop);
-    RUN_TEST(testItShouldBeAbleToDefineAndUseFunction);
-    RUN_TEST(testItShouldRunWithFunctionArgumentNoReturnValue);
-    RUN_TEST(testItShouldRunWithFunctionArgumentWithReturnValue);
-    RUN_TEST(testItShouldReturnNilWhenNoReturnGiven);
-    RUN_TEST(testItShouldBeAbleToDoMultiLevelFunctionCalls);
-    RUN_TEST(testItShouldDoMultiArgFunctionCalls);
-    RUN_TEST(testItShouldBeAbleToDoFunctionCallsWithinExpression);
-    RUN_TEST(testItShouldHaveTwoReturnsInFunction);
+    // RUN_TEST(testItShouldRunBasicAddition);
+    // RUN_TEST(testItShouldDoComplexAdditionAndMultiplication);
+    // RUN_TEST(testItShouldDoComplexAdditionAndMultiplicationAndDivision);
+    // RUN_TEST(testItShouldPopTrueOntoTopOfStack);
+    // RUN_TEST(testItShouldPopFalseOntoTopOfStack);
+    // RUN_TEST(testItShouldDoEqualityBetweenTrueAndFalse);
+    // RUN_TEST(testItShouldPutStringOntoStack);
+    // RUN_TEST(testItShouldConcatStrings);
+    // RUN_TEST(testItShouldPrintSimpleExpression);
+    // RUN_TEST(testItShouldDoSimpleAssignmentAndPrint);
+    // RUN_TEST(testItShouldDoSimpleAdditionWithAssignment);
+    // RUN_TEST(testItShouldDoAssignmentWithDecl);
+    // RUN_TEST(testItShouldDoComplexExpressionInDecl);
+    // RUN_TEST(testIsShouldRunWithinABlock);
+    // RUN_TEST(testItShouldRunTwoBlocksAndPrintCorrectValues);
+    // RUN_TEST(testItShouldBeAbleToReadFromGlobalScope);
+    // RUN_TEST(testItShouldBeAbleToGoIntoIfConditional);
+    // RUN_TEST(testItShouldBeAbleToNotGoIntoIfConditional);
+    // RUN_TEST(testItShouldBeAbleToGoThroughWhileLoop);
+    // RUN_TEST(testItShouldBeAbleToGoThroughForLoop);
+    // RUN_TEST(testItShouldBeAbleToDefineAndUseFunction);
+    // RUN_TEST(testItShouldRunWithFunctionArgumentNoReturnValue);
+    // RUN_TEST(testItShouldRunWithFunctionArgumentWithReturnValue);
+    // RUN_TEST(testItShouldReturnNilWhenNoReturnGiven);
+    // RUN_TEST(testItShouldBeAbleToDoMultiLevelFunctionCalls);
+    // RUN_TEST(testItShouldDoMultiArgFunctionCalls);
+    // RUN_TEST(testItShouldBeAbleToDoFunctionCallsWithinExpression);
+    // RUN_TEST(testItShouldHaveTwoReturnsInFunction);
+    // RUN_TEST(testItShouldGoToBaseCase);
+    // RUN_TEST(testItShouldBeAbleToDoOrStatement);
+    // RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsTo);
+    // RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsToSameNum);
+    // RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsToWhereLeftIsGreater);
+    RUN_TEST(testItShouldDoFibNumbers);
     return UNITY_END();
 }

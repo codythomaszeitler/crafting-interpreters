@@ -117,6 +117,30 @@ void testItShouldBeAbleToParseLessThan()
     TEST_ASSERT_EQUAL_STRING(";", semicolon.lexeme);
 }
 
+void testItShouldBeAbleToDoOr() 
+{
+    const char *sourceCode = "print true || false;";
+    TokenArray tokenArray = parseTokens(sourceCode);
+    TEST_ASSERT_EQUAL(5, tokenArray.count);
+
+    TokenArrayIterator iterator = tokensIterator(tokenArray);
+    Token printToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("print", printToken.lexeme);
+
+    Token numberOneToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("true", numberOneToken.lexeme);
+
+    Token lessThanToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("||", lessThanToken.lexeme);
+    TEST_ASSERT_EQUAL(TOKEN_OR, lessThanToken.type);
+
+    Token numberTwoToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("false", numberTwoToken.lexeme);
+
+    Token semicolon = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING(";", semicolon.lexeme);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -124,5 +148,6 @@ int main(void)
     RUN_TEST(testItShouldParseAddition);
     RUN_TEST(testItShouldBeAbleToParseLessThanOrEquals);
     RUN_TEST(testItShouldBeAbleToParseLessThan);
+    RUN_TEST(testItShouldBeAbleToDoOr);
     return UNITY_END();
 }

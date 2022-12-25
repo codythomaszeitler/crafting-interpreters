@@ -76,6 +76,7 @@ static void blockEnd(Lexer *, TokenArray *);
 static void leftParen(Lexer *, TokenArray *);
 static void rightParen(Lexer *, TokenArray *);
 static void lessThan(Lexer *, TokenArray *);
+static void orOperator(Lexer *, TokenArray *);
 static void comma(Lexer *, TokenArray *);
 
 TokenArray parseTokens(const char *sourceCode)
@@ -154,6 +155,10 @@ TokenArray parseTokens(const char *sourceCode)
         else if (current == '<')
         {
             lessThan(&lexer, &tokenArray);
+        }
+        else if (current == '|') 
+        {
+            orOperator(&lexer, &tokenArray);
         }
         else
         {
@@ -419,6 +424,17 @@ static void lessThan(Lexer *lexer, TokenArray *tokens)
 static void comma(Lexer *lexer, TokenArray *tokens)
 {
     writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_COMMA));
+}
+
+
+static void orOperator(Lexer * lexer, TokenArray *tokens) 
+{
+    int start = lexer->current;
+    pop(lexer);
+    pop(lexer);
+    int end = lexer->current;
+
+    writeToken(tokens, genToken(lexer, TOKEN_OR, start, end));
 }
 
 TokenArrayIterator tokensIterator(TokenArray array)
