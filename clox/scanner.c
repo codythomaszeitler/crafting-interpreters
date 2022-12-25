@@ -21,6 +21,28 @@ static void initLexer(Lexer *lexer, const char *sourceCode)
     lexer->sourceCode = sourceCode;
 }
 
+static char *substring(Lexer *lexer, int start, int end)
+{
+    char *lexeme = malloc(end - start + 1);
+
+    for (int i = start; i < end; i++)
+    {
+        lexeme[i - start] = lexer->sourceCode[i];
+    }
+    lexeme[end - start] = '\0';
+    return lexeme;
+}
+
+static Token genToken(Lexer *lexer, TokenType tokenType, int start, int end)
+{
+    Token token;
+    token.lexeme = substring(lexer, start, end);
+    token.type = tokenType;
+    token.location.start = start;
+    token.location.end = end;
+    return token;
+}
+
 static void writeToken(TokenArray *tokenArray, Token token)
 {
     if (tokenArray->capacity < tokenArray->count + 1)
@@ -165,18 +187,6 @@ static char pop(Lexer *lexer)
     char popped = lexer->sourceCode[lexer->current];
     lexer->current = lexer->current + 1;
     return popped;
-}
-
-static char *substring(Lexer *lexer, int start, int end)
-{
-    char *lexeme = malloc(end - start + 1);
-
-    for (int i = start; i < end; i++)
-    {
-        lexeme[i - start] = lexer->sourceCode[i];
-    }
-    lexeme[end - start] = '\0';
-    return lexeme;
 }
 
 static void identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
@@ -389,7 +399,21 @@ static void rightParen(Lexer *lexer, TokenArray *tokens)
 
 static void lessThan(Lexer *lexer, TokenArray *tokens)
 {
-    writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_LESS));
+    int start = lexer->current;
+
+    pop(lexer);
+    char maybeEquals = peek(lexer);
+    if (maybeEquals == '=')
+    {
+        pop(lexer);
+        int end = lexer->current;
+        writeToken(tokens, genToken(lexer, TOKEN_LESS_EQUAL, start, end));
+    }
+    else
+    {
+        int end = lexer->current;
+        writeToken(tokens, genToken(lexer, TOKEN_LESS, start, end));
+    }
 }
 
 static void comma(Lexer *lexer, TokenArray *tokens)

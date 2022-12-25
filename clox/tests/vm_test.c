@@ -271,15 +271,42 @@ void testItShouldReturnNilWhenNoReturnGiven()
     TEST_ASSERT_EQUAL_STRING("nil", test_messages[1]);
 }
 
-// int main(void)
-// {
-//     UNITY_BEGIN();
-//     RUN_TEST(testItShouldBeAbleToAddConstantToVMStack);
-//     RUN_TEST(testItShouldBeAbleToDoMultiplication);
-//     RUN_TEST(testItShouldBeAbleToDoDivision);
-//     RUN_TEST(testItShouldBeAbleToDoSubtraction);
-//     return UNITY_END();
-// }
+void testItShouldBeAbleToDoMultiLevelFunctionCalls()
+{
+    const char *sourceCode = "{ func foo(a) { func bar(b) { print b;} bar(a); } foo(5); }";
+
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[0]);
+}
+
+void testItShouldDoMultiArgFunctionCalls()
+{
+    const char *sourceCode = "{ func foo(a, b, c) { print a + b + c;} foo(1, 2, 3); }";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("6.000000", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoFunctionCallsWithinExpression()
+{
+    const char *sourceCode = "{ func foo(a) {return a + 1;} var c = foo(1) + foo(2) + foo(3); print c; }";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("9.000000", test_messages[0]);
+}
+
+void testItShouldHaveTwoReturnsInFunction()
+{
+    const char *sourceCode = "{func foo(a) { if (a <= 1) {return a;} return a + 1;} var c = foo(2); print c;";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("2.000000", test_messages[0]);
+}
+// const char *sourceCode = "func fib(n) { if (n <= 1) {return n;} return fib (n - 2) + fib(n - 1);} print fib(9);";
+// runInterpreter(&testObject, sourceCode);
+// TEST_ASSERT_EQUAL(1, test_messages_size);
+// TEST_ASSERT_EQUAL_STRING("34.000000", test_messages[0]);
 
 int main(void)
 {
@@ -308,5 +335,9 @@ int main(void)
     RUN_TEST(testItShouldRunWithFunctionArgumentNoReturnValue);
     RUN_TEST(testItShouldRunWithFunctionArgumentWithReturnValue);
     RUN_TEST(testItShouldReturnNilWhenNoReturnGiven);
+    RUN_TEST(testItShouldBeAbleToDoMultiLevelFunctionCalls);
+    RUN_TEST(testItShouldDoMultiArgFunctionCalls);
+    RUN_TEST(testItShouldBeAbleToDoFunctionCallsWithinExpression);
+    RUN_TEST(testItShouldHaveTwoReturnsInFunction);
     return UNITY_END();
 }

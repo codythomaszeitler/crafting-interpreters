@@ -69,10 +69,60 @@ void testItShouldParseAddition()
     TEST_ASSERT_FALSE(hasNextToken(&iterator));
 }
 
+void testItShouldBeAbleToParseLessThanOrEquals()
+{
+    const char *sourceCode = "print 1 <= 2;";
+    TokenArray tokenArray = parseTokens(sourceCode);
+    TEST_ASSERT_EQUAL(5, tokenArray.count);
+
+    TokenArrayIterator iterator = tokensIterator(tokenArray);
+    Token printToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("print", printToken.lexeme);
+
+    Token numberOneToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("1", numberOneToken.lexeme);
+
+    Token lessThanOrEqualsToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("<=", lessThanOrEqualsToken.lexeme);
+    TEST_ASSERT_EQUAL(TOKEN_LESS_EQUAL, lessThanOrEqualsToken.type);
+
+    Token numberTwoToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("2", numberTwoToken.lexeme);
+
+    Token semicolon = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING(";", semicolon.lexeme);
+}
+
+void testItShouldBeAbleToParseLessThan()
+{
+    const char *sourceCode = "print 1 < 2;";
+    TokenArray tokenArray = parseTokens(sourceCode);
+    TEST_ASSERT_EQUAL(5, tokenArray.count);
+
+    TokenArrayIterator iterator = tokensIterator(tokenArray);
+    Token printToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("print", printToken.lexeme);
+
+    Token numberOneToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("1", numberOneToken.lexeme);
+
+    Token lessThanToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("<", lessThanToken.lexeme);
+    TEST_ASSERT_EQUAL(TOKEN_LESS, lessThanToken.type);
+
+    Token numberTwoToken = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING("2", numberTwoToken.lexeme);
+
+    Token semicolon = popToken(&iterator);
+    TEST_ASSERT_EQUAL_STRING(";", semicolon.lexeme);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(testItShouldParsePrintExpression);
     RUN_TEST(testItShouldParseAddition);
+    RUN_TEST(testItShouldBeAbleToParseLessThanOrEquals);
+    RUN_TEST(testItShouldBeAbleToParseLessThan);
     return UNITY_END();
 }

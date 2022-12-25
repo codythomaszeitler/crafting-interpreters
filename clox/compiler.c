@@ -663,13 +663,19 @@ static int funcDeclArgs(Parser *parser)
 
     if (maybeRightParen.type != TOKEN_RIGHT_PAREN)
     {
-        Token funcArg = popToken(parser->tokens);
-        do
+        while (true) 
         {
+            Token funcArg = popToken(parser->tokens);
+            Token commaOrParen = popToken(parser->tokens);
+
             defineVariableBinding(parser, funcArg);
             numFunctionArgs++;
-            funcArg = popToken(parser->tokens);
-        } while (funcArg.type != TOKEN_RIGHT_PAREN);
+
+            if (commaOrParen.type == TOKEN_RIGHT_PAREN)
+            {
+                break;
+            }
+        }
     }
     else
     {
