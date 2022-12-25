@@ -14,7 +14,11 @@
         "concepts": "c",
         "limits": "c",
         "new": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "VALUE.H": "cpp"
     },
-    "C_Cpp.errorSquiggles": "Disabled"
+    "C_Cpp.errorSquiggles": "Disabled",
+    "cSpell.words": [
+        "CLOXSTRING"
+    ]
 }

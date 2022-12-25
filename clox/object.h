@@ -2,7 +2,8 @@
 #define OBJECT_HEADER
 
 typedef enum ObjType {
-    ObjString
+    ObjString,
+    ObjFunction
 } ObjType;
 
 typedef struct Obj {

@@ -54,6 +54,7 @@ static void blockEnd(Lexer *, TokenArray *);
 static void leftParen(Lexer *, TokenArray *);
 static void rightParen(Lexer *, TokenArray *);
 static void lessThan(Lexer *, TokenArray *);
+static void comma(Lexer *, TokenArray *);
 
 TokenArray parseTokens(const char *sourceCode)
 {
@@ -124,6 +125,10 @@ TokenArray parseTokens(const char *sourceCode)
         {
             rightParen(&lexer, &tokenArray);
         }
+        else if (current == ',')
+        {
+            comma(&lexer, &tokenArray);
+        }
         else if (current == '<')
         {
             lessThan(&lexer, &tokenArray);
@@ -187,6 +192,15 @@ static void identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
     int lexemeLength = strlen(lexeme);
 
     TokenType type = -1;
+
+    if (lexemeLength == 6)
+    {
+        if (!strcmp("return", lexeme))
+        {
+            type = TOKEN_RETURN;
+        }
+    }
+
     if (lexemeLength == 5)
     {
         if (!strcmp("print", lexeme))
@@ -209,6 +223,11 @@ static void identifierOrKeyword(Lexer *lexer, TokenArray *tokenArray)
         if (!strcasecmp("true", lexeme))
         {
             type = TOKEN_TRUE;
+        }
+
+        if (!strcmp("func", lexeme))
+        {
+            type = TOKEN_FUN;
         }
     }
 
@@ -371,6 +390,11 @@ static void rightParen(Lexer *lexer, TokenArray *tokens)
 static void lessThan(Lexer *lexer, TokenArray *tokens)
 {
     writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_LESS));
+}
+
+static void comma(Lexer *lexer, TokenArray *tokens)
+{
+    writeToken(tokens, consumeSingleCharacter(lexer, TOKEN_COMMA));
 }
 
 TokenArrayIterator tokensIterator(TokenArray array)

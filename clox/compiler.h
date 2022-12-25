@@ -3,6 +3,8 @@
 
 #include "chunk.h"
 #include "vm.h"
+#include "functionobj.h"
+#include "scanner.h"
 
 typedef enum {
   PREC_NONE,
@@ -27,5 +29,6 @@ void initInterpreter(Interpreter*);
 void freeInterpreter(Interpreter*);
 
 void runInterpreter(Interpreter*, const char* sourceCode);
-void compile(Chunk *chunk, const char* sourceCode);
+void compile(FunctionObj* functionObj, TokenArrayIterator* tokens);
+TokenArrayIterator tokenize(const char* sourceCode);
 #endif

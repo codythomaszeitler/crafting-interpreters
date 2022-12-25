@@ -5,20 +5,28 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include "functionobj.h"
+#include <stdio.h>
 
-typedef struct LocationStackLocation
+typedef struct VariableBindingStackLocation
 {
     Token token;
-} LocationStackLocation;
+} VariableBindingStackLocation;
+
+typedef struct FunctionCompiler
+{
+    FunctionObj *compiling;
+    HashMap functions;
+    int stackDepth;
+    int blockDepth;
+    VariableBindingStackLocation stack[5];
+} FunctionCompiler;
 
 typedef struct Parser
 {
     TokenArrayIterator *tokens;
-    Chunk *compiling;
-
-    int stackDepth;
-    int blockDepth;
-    LocationStackLocation stack[256];
+    FunctionCompiler compilers[256];
+    int depth;
 } Parser;
 
 typedef void (*ParseFn)(Parser *);
@@ -30,10 +38,46 @@ typedef struct ParseRule
     Precedence Precedence;
 } ParseRule;
 
+static FunctionCompiler *getCurrentCompiler(Parser *parser)
+{
+    FunctionCompiler *current = &parser->compilers[parser->depth];
+    return current;
+}
+
+static Chunk *getCurrentCompilerBytecode(Parser *parser)
+{
+    return getCurrentCompiler(parser)->compiling->bytecode;
+}
+
+static HashMap *getCurrentCompilerFunctions(Parser *parser)
+{
+    return &getCurrentCompiler(parser)->functions;
+}
+
+static void advanceCompilerFunction(Parser *parser, FunctionObj *function)
+{
+    parser->depth++;
+    FunctionCompiler *current = getCurrentCompiler(parser);
+    current->compiling = function;
+    current->blockDepth = 0;
+    current->stackDepth = 0;
+}
+
+static void undoCompilerFunction(Parser *parser)
+{
+    FunctionCompiler *current = getCurrentCompiler(parser);
+    current->compiling = NULL;
+    parser->depth--;
+}
+
+static bool isAtTopLevel(Parser *parser);
+static bool isInMainFunction(Parser *parser);
 static void number(Parser *);
 static void binary(Parser *);
 static void unary(Parser *);
 static void literal(Parser *);
+static void identifier(Parser *parser);
+static void callable(Parser *parser);
 static void ifStatement(Parser *);
 static void expression(Parser *);
 static void parseExpression(Precedence, Parser *);
@@ -54,7 +98,8 @@ ParseRule rules[] = {
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
     [TOKEN_STRING] = {literal, NULL, PREC_FACTOR},
-    [TOKEN_IDENTIFIER] = {literal, NULL, PREC_NONE},
+    [TOKEN_IDENTIFIER] = {identifier, NULL, PREC_CALL},
+    [TOKEN_LEFT_PAREN] = {NULL, callable, PREC_CALL},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR}};
 
 static ParseRule *getRule(TokenType tokenType)
@@ -69,9 +114,9 @@ static void number(Parser *parser)
     double number = strtod(shouldBeNumber.lexeme, NULL);
     Value value = wrapNumber(number);
 
-    int valueConstantIndex = addConstant(parser->compiling, value);
-    writeChunk(parser->compiling, OP_CONSTANT);
-    writeChunk(parser->compiling, valueConstantIndex);
+    int valueConstantIndex = addConstant(getCurrentCompilerBytecode(parser), value);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_CONSTANT);
+    writeChunk(getCurrentCompilerBytecode(parser), valueConstantIndex);
 }
 
 static void literal(Parser *parser)
@@ -80,31 +125,81 @@ static void literal(Parser *parser)
 
     if (shouldBeTrue.type == TOKEN_TRUE)
     {
-        writeChunk(parser->compiling, OP_TRUE);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_TRUE);
     }
     else if (shouldBeTrue.type == TOKEN_FALSE)
     {
-        writeChunk(parser->compiling, OP_FALSE);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_FALSE);
     }
     else if (shouldBeTrue.type == TOKEN_STRING)
     {
-        writeChunk(parser->compiling, OP_STRING);
-        writeString(parser->compiling, (const char *)shouldBeTrue.lexeme);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_STRING);
+        writeString(getCurrentCompilerBytecode(parser), (const char *)shouldBeTrue.lexeme);
     }
-    else if (shouldBeTrue.type == TOKEN_IDENTIFIER)
+}
+
+static bool isFunction(Parser *parser, const char *functionName)
+{
+    StringObj *functionNameAsString = asString(functionName);
+    Value functionIfExists = hashMapGet(getCurrentCompilerFunctions(parser), functionNameAsString);
+    freeStringObj(functionNameAsString);
+    return !isNil(functionIfExists);
+}
+
+static uint8_t getFunctionConstantLocation(Parser *parser, const char *functionName)
+{
+    StringObj *functionNameAsString = asString(functionName);
+    Value functionIfExists = hashMapGet(getCurrentCompilerFunctions(parser), functionNameAsString);
+    freeStringObj(functionNameAsString);
+    return unwrapNumber(functionIfExists);
+}
+
+static void callable(Parser *parser)
+{
+    popToken(parser->tokens);
+    uint8_t functionArgumentCount = 0;
+
+    if (peekAtToken(parser->tokens).type != TOKEN_RIGHT_PAREN)
     {
-        if (isGlobalBinding(parser, shouldBeTrue))
+        do
         {
-            int constantLocation = addConstant(parser->compiling, wrapString(shouldBeTrue.lexeme));
-            writeChunk(parser->compiling, OP_VAR_GLOBAL_EXPRESSION);
-            writeChunk(parser->compiling, constantLocation);
+            expression(parser);
+            functionArgumentCount++;
+        } while (popToken(parser->tokens).type == TOKEN_COMMA);
+    }
+    else
+    {
+        popToken(parser->tokens);
+    }
+
+    writeChunk(getCurrentCompilerBytecode(parser), OP_CALL);
+    writeChunk(getCurrentCompilerBytecode(parser), functionArgumentCount);
+}
+
+static void identifier(Parser *parser)
+{
+    Token shouldBeId = popToken(parser->tokens);
+
+    if (shouldBeId.type == TOKEN_IDENTIFIER)
+    {
+        if (isFunction(parser, shouldBeId.lexeme))
+        {
+            int constantLocation = getFunctionConstantLocation(parser, shouldBeId.lexeme);
+            writeChunk(getCurrentCompilerBytecode(parser), OP_CONSTANT);
+            writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
+        }
+        else if (isGlobalBinding(parser, shouldBeId))
+        {
+            int constantLocation = addConstant(getCurrentCompilerBytecode(parser), wrapString(shouldBeId.lexeme));
+            writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_GLOBAL_EXPRESSION);
+            writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
         }
         else
         {
-            uint8_t stackLocation = getVariableBinding(parser, shouldBeTrue);
+            uint8_t stackLocation = getVariableBinding(parser, shouldBeId);
 
-            writeChunk(parser->compiling, OP_VAR_EXPRESSION);
-            writeChunk(parser->compiling, stackLocation);
+            writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_EXPRESSION);
+            writeChunk(getCurrentCompilerBytecode(parser), stackLocation);
         }
     }
 }
@@ -118,28 +213,28 @@ static void binary(Parser *parser)
 
     if (operator.type == TOKEN_PLUS)
     {
-        writeChunk(parser->compiling, OP_ADD);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_ADD);
     }
     else if (operator.type == TOKEN_STAR)
     {
-        writeChunk(parser->compiling, OP_MULT);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_MULT);
     }
     else if (operator.type == TOKEN_MINUS)
     {
-        writeChunk(parser->compiling, OP_SUB);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_SUB);
     }
     else if (operator.type == TOKEN_SLASH)
     {
-        writeChunk(parser->compiling, OP_DIV);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_DIV);
     }
     else if (operator.type == TOKEN_LESS)
     {
-        writeChunk(parser->compiling, OP_LESS_THAN);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_LESS_THAN);
     }
     else if (operator.type == TOKEN_BANG_EQUAL)
     {
-        writeChunk(parser->compiling, OP_EQUAL);
-        writeChunk(parser->compiling, OP_NEGATE);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_EQUAL);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_NEGATE);
     }
 }
 
@@ -150,7 +245,7 @@ static void unary(Parser *parser)
 
     parseExpression(parseRule->Precedence + 1, parser);
 
-    writeChunk(parser->compiling, OP_NEGATE);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_NEGATE);
 }
 
 void initInterpreter(Interpreter *interpreter)
@@ -163,33 +258,99 @@ void freeInterpreter(Interpreter *interpreter)
 {
 }
 
+void initParser(Parser *parser)
+{
+    parser->tokens = NULL;
+    parser->depth = -1;
+
+    initHashMap(getCurrentCompilerFunctions(parser));
+}
+
+void freeParser(Parser *parser)
+{
+    freeHashMap(getCurrentCompilerFunctions(parser));
+}
+
+void compile(FunctionObj *functionObj, TokenArrayIterator *tokens)
+{
+    Parser parser;
+    initParser(&parser);
+    parser.tokens = tokens;
+
+    advanceCompilerFunction(&parser, functionObj);
+
+    while (hasNextToken(parser.tokens))
+    {
+        statement(&parser);
+    }
+
+    undoCompilerFunction(&parser);
+
+    writeChunk(functionObj->bytecode, OP_RETURN);
+
+    // freeParser(&parser);
+}
+
+TokenArrayIterator tokenize(const char *sourceCode)
+{
+    TokenArray tokens = parseTokens(sourceCode);
+    TokenArrayIterator iterator = tokensIterator(tokens);
+    return iterator;
+}
+
 void runInterpreter(Interpreter *interpreter, const char *sourceCode)
 {
-    Chunk bytecode;
-    initChunk(&bytecode);
+    FunctionObj functionObj;
+    initFunctionObj(&functionObj);
 
-    compile(&bytecode, sourceCode);
+    TokenArrayIterator tokens = tokenize(sourceCode);
+    // what the fuck
+    compile(&functionObj, &tokens);
 
     interpreter->vm.onStdOut = interpreter->onStdOut;
-    interpret(&interpreter->vm, &bytecode);
+    prepareForCall(&interpreter->vm, &functionObj);
+    interpret(&interpreter->vm);
+
+    freeFunctionObj(&functionObj);
 }
 
 static void printStatement(Parser *parser)
 {
     popToken(parser->tokens);
     expression(parser);
-    writeChunk(parser->compiling, OP_PRINT);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_PRINT);
     popToken(parser->tokens);
+}
+
+static bool isInMainFunction(Parser *parser)
+{
+    return parser->depth == -1;
+}
+
+static bool isAtTopLevel(Parser *parser)
+{
+    FunctionCompiler *compiler = getCurrentCompiler(parser);
+    return compiler->blockDepth == 0;
 }
 
 static void defineVariableBinding(Parser *parser, Token token)
 {
-    if (parser->blockDepth != -1)
+    bool shouldDefineVariableBinding = true;
+    if (isInMainFunction(parser))
     {
-        LocationStackLocation *slot = &parser->stack[parser->stackDepth];
+        if (isAtTopLevel(parser))
+        {
+            shouldDefineVariableBinding = false;
+        }
+    }
+
+    if (shouldDefineVariableBinding)
+    {
+        FunctionCompiler *compiler = getCurrentCompiler(parser);
+        VariableBindingStackLocation *slot = &compiler->stack[compiler->stackDepth];
         slot->token = token;
 
-        parser->stackDepth++;
+        compiler->stackDepth++;
     }
 }
 
@@ -208,16 +369,14 @@ static uint8_t getVariableBinding(Parser *parser, Token token)
 static int getVariableBindingAsInt(Parser *parser, Token token)
 {
     int bindingLocation = _BINDING_NOT_FOUND_;
-    if (parser->blockDepth != -1)
+    FunctionCompiler *compiler = getCurrentCompiler(parser);
+    for (int i = compiler->stackDepth - 1; i >= 0; i--)
     {
-        for (int i = parser->stackDepth - 1; i >= 0; i--)
+        VariableBindingStackLocation *slot = &compiler->stack[i];
+        if (!strcmp(token.lexeme, slot->token.lexeme))
         {
-            LocationStackLocation *slot = &parser->stack[i];
-            if (!strcmp(token.lexeme, slot->token.lexeme))
-            {
-                bindingLocation = i;
-                break;
-            }
+            bindingLocation = i;
+            break;
         }
     }
     return bindingLocation;
@@ -225,7 +384,7 @@ static int getVariableBindingAsInt(Parser *parser, Token token)
 
 static bool isInGlobalScope(Parser *parser)
 {
-    return parser->blockDepth == -1;
+    return parser->depth == -1;
 }
 
 static void variableDecl(Parser *parser)
@@ -235,14 +394,14 @@ static void variableDecl(Parser *parser)
 
     if (isInGlobalScope(parser))
     {
-        writeChunk(parser->compiling, OP_VAR_GLOBAL_DECL);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_GLOBAL_DECL);
         Value asString = wrapString(identifier.lexeme);
-        int constantLocation = addConstant(parser->compiling, asString);
-        writeChunk(parser->compiling, constantLocation);
+        int constantLocation = addConstant(getCurrentCompilerBytecode(parser), asString);
+        writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
     }
     else
     {
-        writeChunk(parser->compiling, OP_VAR_DECL);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_DECL);
         defineVariableBinding(parser, identifier);
     }
 
@@ -253,22 +412,29 @@ static void variableDecl(Parser *parser)
         expression(parser);
         if (isGlobalBinding(parser, identifier))
         {
-            writeChunk(parser->compiling, OP_VAR_GLOBAL_ASSIGN);
+            writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_GLOBAL_ASSIGN);
             Value asString = wrapString(identifier.lexeme);
-            int constantLocation = addConstant(parser->compiling, asString);
-            writeChunk(parser->compiling, constantLocation);
+            int constantLocation = addConstant(getCurrentCompilerBytecode(parser), asString);
+            writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
         }
         else
         {
-            writeChunk(parser->compiling, OP_VAR_ASSIGN);
+            writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_ASSIGN);
             uint8_t offset = getVariableBinding(parser, identifier);
-            writeChunk(parser->compiling, offset);
+            writeChunk(getCurrentCompilerBytecode(parser), offset);
         }
         popToken(parser->tokens);
     }
 }
 
-static void variableAssignment(Parser *parser)
+static void expressionStatement(Parser *parser)
+{
+    expression(parser);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_POP);
+    popToken(parser->tokens);
+}
+
+static void varAssign(Parser *parser)
 {
     Token identifier = popToken(parser->tokens);
     popToken(parser->tokens);
@@ -277,36 +443,51 @@ static void variableAssignment(Parser *parser)
 
     if (isGlobalBinding(parser, identifier))
     {
-        writeChunk(parser->compiling, OP_VAR_GLOBAL_ASSIGN);
-        int constantLocation = addConstant(parser->compiling, wrapString(identifier.lexeme));
-        writeChunk(parser->compiling, constantLocation);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_GLOBAL_ASSIGN);
+        int constantLocation = addConstant(getCurrentCompilerBytecode(parser), wrapString(identifier.lexeme));
+        writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
     }
     else
     {
-        writeChunk(parser->compiling, OP_VAR_ASSIGN);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_ASSIGN);
         uint8_t offset = getVariableBinding(parser, identifier);
-        writeChunk(parser->compiling, offset);
+        writeChunk(getCurrentCompilerBytecode(parser), offset);
     }
 
     popToken(parser->tokens);
 }
 
+static void varAssignOrFunctionExpr(Parser *parser)
+{
+    Token identifier = peekAtToken(parser->tokens);
+    if (isFunction(parser, identifier.lexeme))
+    {
+        expressionStatement(parser);
+    }
+    else
+    {
+        varAssign(parser);
+    }
+}
+
 static void blockStart(Parser *parser)
 {
-    parser->blockDepth++;
+    FunctionCompiler *current = getCurrentCompiler(parser);
+    current->blockDepth++;
 }
 
 static void blockEnd(Parser *parser, int stackDepthStart)
 {
-    parser->blockDepth--;
-    parser->stackDepth = stackDepthStart;
+    FunctionCompiler *current = getCurrentCompiler(parser);
+    current->blockDepth--;
+    current->stackDepth = stackDepthStart;
 }
 
 static void releaseLocals(Parser *parser, int numLocals)
 {
     for (int i = 0; i < numLocals; i++)
     {
-        writeChunk(parser->compiling, OP_POP);
+        writeChunk(getCurrentCompilerBytecode(parser), OP_POP);
     }
 }
 
@@ -315,13 +496,13 @@ static void blockStatement(Parser *parser)
     popToken(parser->tokens);
 
     blockStart(parser);
-    int stackDepthStart = parser->stackDepth;
+    int stackDepthStart = parser->depth;
     while (peekAtToken(parser->tokens).type != TOKEN_RIGHT_BRACE)
     {
         statement(parser);
     }
 
-    int numLocals = parser->stackDepth - stackDepthStart;
+    int numLocals = parser->depth - stackDepthStart;
     releaseLocals(parser, numLocals);
 
     blockEnd(parser, stackDepthStart);
@@ -335,14 +516,14 @@ static void ifStatement(Parser *parser)
 
     expression(parser);
 
-    writeChunk(parser->compiling, OP_JUMP_IF_FALSE);
-    int currentLocation = parser->compiling->count;
-    writeShort(parser->compiling, UINT16_MAX);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_JUMP_IF_FALSE);
+    int currentLocation = getCurrentCompilerBytecode(parser)->count;
+    writeShort(getCurrentCompilerBytecode(parser), UINT16_MAX);
 
     popToken(parser->tokens);
     blockStatement(parser);
 
-    overwriteShort(parser->compiling, currentLocation, parser->compiling->count);
+    overwriteShort(getCurrentCompilerBytecode(parser), currentLocation, getCurrentCompilerBytecode(parser)->count);
 }
 
 static void whileStatement(Parser *parser)
@@ -350,23 +531,23 @@ static void whileStatement(Parser *parser)
     popToken(parser->tokens); // popping while
     popToken(parser->tokens); // popping (
 
-    int startOfWhileExpression = parser->compiling->count + 1;
+    int startOfWhileExpression = getCurrentCompilerBytecode(parser)->count + 1;
     expression(parser);
 
     popToken(parser->tokens); // popping )
 
-    writeChunk(parser->compiling, OP_JUMP_IF_FALSE);
-    int jumpIfFalseLocation = parser->compiling->count;
-    writeShort(parser->compiling, UINT16_MAX);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_JUMP_IF_FALSE);
+    int jumpIfFalseLocation = getCurrentCompilerBytecode(parser)->count;
+    writeShort(getCurrentCompilerBytecode(parser), UINT16_MAX);
 
     blockStatement(parser);
 
-    int blockLength = parser->compiling->count - startOfWhileExpression + 1;
+    int blockLength = getCurrentCompilerBytecode(parser)->count - startOfWhileExpression + 1;
 
-    writeChunk(parser->compiling, OP_LOOP);
-    writeChunk(parser->compiling, blockLength);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_LOOP);
+    writeChunk(getCurrentCompilerBytecode(parser), blockLength);
 
-    overwriteShort(parser->compiling, jumpIfFalseLocation, parser->compiling->count);
+    overwriteShort(getCurrentCompilerBytecode(parser), jumpIfFalseLocation, getCurrentCompilerBytecode(parser)->count);
 }
 
 static void compileInitStatements(Parser *parser)
@@ -385,7 +566,7 @@ static void compileInitStatements(Parser *parser)
 
 static int compileExpressionStatement(Parser *parser)
 {
-    int startOfIterablePortion = parser->compiling->count + 1;
+    int startOfIterablePortion = getCurrentCompilerBytecode(parser)->count + 1;
     expression(parser);
 
     popToken(parser->tokens); // ; that ends the expression?
@@ -395,37 +576,37 @@ static int compileExpressionStatement(Parser *parser)
 
 static int writeEmptyIfFalseJumpStatement(Parser *parser)
 {
-    writeChunk(parser->compiling, OP_JUMP_IF_FALSE);
-    int jumpIfFalseLocation = parser->compiling->count;
-    writeShort(parser->compiling, UINT16_MAX);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_JUMP_IF_FALSE);
+    int jumpIfFalseLocation = getCurrentCompilerBytecode(parser)->count;
+    writeShort(getCurrentCompilerBytecode(parser), UINT16_MAX);
 
     return jumpIfFalseLocation;
 }
 
 static int writeEmptyJumpStatement(Parser *parser)
 {
-    writeChunk(parser->compiling, OP_JUMP);
-    int forLoopUpdateLocation = parser->compiling->count;
-    writeShort(parser->compiling, UINT16_MAX);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_JUMP);
+    int forLoopUpdateLocation = getCurrentCompilerBytecode(parser)->count;
+    writeShort(getCurrentCompilerBytecode(parser), UINT16_MAX);
     return forLoopUpdateLocation;
 }
 
 static int compileUpdateStatements(Parser *parser, int startOfExpressionLocation)
 {
-    int startOfCompileUpdateStatements = parser->compiling->count;
+    int startOfCompileUpdateStatements = getCurrentCompilerBytecode(parser)->count;
     Token varAssignOrSemicolon = peekAtToken(parser->tokens);
     if (varAssignOrSemicolon.type == TOKEN_IDENTIFIER)
     {
-        variableAssignment(parser);
+        varAssignOrFunctionExpr(parser);
     }
     else
     {
         popToken(parser->tokens);
     }
 
-    int jumpOffset = parser->compiling->count - startOfExpressionLocation + 1;
-    writeChunk(parser->compiling, OP_LOOP);
-    writeChunk(parser->compiling, jumpOffset);
+    int jumpOffset = getCurrentCompilerBytecode(parser)->count - startOfExpressionLocation + 1;
+    writeChunk(getCurrentCompilerBytecode(parser), OP_LOOP);
+    writeChunk(getCurrentCompilerBytecode(parser), jumpOffset);
 
     return startOfCompileUpdateStatements;
 }
@@ -433,7 +614,7 @@ static int compileUpdateStatements(Parser *parser, int startOfExpressionLocation
 static void forStatement(Parser *parser)
 {
     blockStart(parser);
-    int stackDepthStart = parser->stackDepth;
+    int stackDepthStart = parser->depth;
 
     popToken(parser->tokens); // should have been for
     popToken(parser->tokens); // should have been (
@@ -446,20 +627,79 @@ static void forStatement(Parser *parser)
 
     int startOfUpdateStatements = compileUpdateStatements(parser, startOfIterablePortion);
 
-    overwriteShort(parser->compiling, expressionToBodyJumpLocation, parser->compiling->count);
+    overwriteShort(getCurrentCompilerBytecode(parser), expressionToBodyJumpLocation, getCurrentCompilerBytecode(parser)->count);
 
     popToken(parser->tokens); // should have been a )
 
     blockStatement(parser);
 
-    int blockLength = parser->compiling->count - startOfUpdateStatements;
+    int blockLength = getCurrentCompilerBytecode(parser)->count - startOfUpdateStatements;
 
-    writeChunk(parser->compiling, OP_LOOP);
-    writeChunk(parser->compiling, blockLength);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_LOOP);
+    writeChunk(getCurrentCompilerBytecode(parser), blockLength);
 
     blockEnd(parser, stackDepthStart);
 
-    overwriteShort(parser->compiling, jumpIfFalseValueLocation, parser->compiling->count);
+    overwriteShort(getCurrentCompilerBytecode(parser), jumpIfFalseValueLocation, getCurrentCompilerBytecode(parser)->count);
+}
+
+static FunctionObj *defineNewLocalFunction(Parser *parser, Token funcId)
+{
+    FunctionObj *newFunctionDecl = malloc(sizeof(FunctionObj));
+    initFunctionObj(newFunctionDecl);
+    newFunctionDecl->name = asString(funcId.lexeme);
+
+    int constantIndex = addConstant(getCurrentCompilerBytecode(parser), wrapObject((Obj *)newFunctionDecl));
+    hashMapPut(getCurrentCompilerFunctions(parser), newFunctionDecl->name, wrapNumber(constantIndex));
+
+    return newFunctionDecl;
+}
+
+static int funcDeclArgs(Parser *parser)
+{
+    int numFunctionArgs = 0;
+    popToken(parser->tokens);
+    Token maybeRightParen = peekAtToken(parser->tokens);
+
+    if (maybeRightParen.type != TOKEN_RIGHT_PAREN)
+    {
+        Token funcArg = popToken(parser->tokens);
+        do
+        {
+            defineVariableBinding(parser, funcArg);
+            numFunctionArgs++;
+            funcArg = popToken(parser->tokens);
+        } while (funcArg.type != TOKEN_RIGHT_PAREN);
+    }
+    else
+    {
+        popToken(parser->tokens);
+    }
+    return numFunctionArgs;
+}
+
+static void funcDecl(Parser *parser)
+{
+    popToken(parser->tokens);
+    Token funcId = popToken(parser->tokens);
+
+    FunctionObj *newLocalFunction = defineNewLocalFunction(parser, funcId);
+    advanceCompilerFunction(parser, newLocalFunction);
+
+    int numArgs = funcDeclArgs(parser);
+    newLocalFunction->arity = numArgs;
+    
+    blockStatement(parser);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_RETURN);
+    undoCompilerFunction(parser);
+}
+
+static void returnStmt(Parser *parser) 
+{
+    popToken(parser->tokens);
+    expression(parser);
+    writeChunk(getCurrentCompilerBytecode(parser), OP_RETURN);
+    popToken(parser->tokens);
 }
 
 static void statement(Parser *parser)
@@ -476,7 +716,7 @@ static void statement(Parser *parser)
     }
     else if (peeked.type == TOKEN_IDENTIFIER)
     {
-        variableAssignment(parser);
+        varAssignOrFunctionExpr(parser);
     }
     else if (peeked.type == TOKEN_LEFT_BRACE)
     {
@@ -494,35 +734,26 @@ static void statement(Parser *parser)
     {
         forStatement(parser);
     }
+    else if (peeked.type == TOKEN_FUN)
+    {
+        funcDecl(parser);
+    }
+    else if (peeked.type == TOKEN_RETURN) 
+    {
+        returnStmt(parser);
+    }
     else
     {
         expression(parser);
     }
 }
 
-void compile(Chunk *chunk, const char *sourceCode)
-{
-    TokenArray tokens = parseTokens(sourceCode);
-    TokenArrayIterator iterator = tokensIterator(tokens);
-
-    Parser parser;
-    parser.compiling = chunk;
-    parser.tokens = &iterator;
-    parser.stackDepth = 0;
-    parser.blockDepth = -1;
-
-    while (hasNextToken(parser.tokens))
-    {
-        statement(&parser);
-    }
-
-    writeChunk(chunk, OP_RETURN);
-}
-
 static void expression(Parser *parser)
 {
     parseExpression(PREC_ASSIGNMENT, parser);
 }
+
+static bool isAtEndOfExpression(Parser *);
 
 static void parseExpression(Precedence precedence, Parser *parser)
 {
@@ -533,12 +764,18 @@ static void parseExpression(Precedence precedence, Parser *parser)
 
     Token maybeInfixToken = peekAtToken(parser->tokens);
     ParseRule *infixParseRule = getRule(maybeInfixToken.type);
-    while (hasNextToken(parser->tokens) && !isAtEndOfStatement(parser) && !isAtEndOfConditional(parser) && precedence <= infixParseRule->Precedence)
+    while (!isAtEndOfExpression(parser) && precedence <= infixParseRule->Precedence)
     {
         ParseFn infixFunction = getRule(maybeInfixToken.type)->infix;
         infixFunction(parser);
         maybeInfixToken = peekAtToken(parser->tokens);
     }
+}
+
+static bool isAtEndOfFunctionArgument(Parser *parser);
+static bool isAtEndOfExpression(Parser *parser)
+{
+    return !hasNextToken(parser->tokens) || isAtEndOfStatement(parser) || isAtEndOfConditional(parser) || isAtEndOfFunctionArgument(parser);
 }
 
 static bool isAtEndOfStatement(Parser *parser)
@@ -549,4 +786,9 @@ static bool isAtEndOfStatement(Parser *parser)
 static bool isAtEndOfConditional(Parser *parser)
 {
     return peekAtToken(parser->tokens).type == TOKEN_RIGHT_PAREN;
+}
+
+static bool isAtEndOfFunctionArgument(Parser *parser)
+{
+    return peekAtToken(parser->tokens).type == TOKEN_COMMA;
 }

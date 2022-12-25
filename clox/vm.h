@@ -6,20 +6,43 @@
 #include "hashmap.h"
 #include <stdint.h>
 #include <stdlib.h>
+#include "value.h"
+#include "functionobj.h"
 
-typedef struct VirtualMachine {
-    Value stack[256];
+#define _NUM_CALL_FRAMES_ 256
+
+typedef struct CallFrame
+{
+    FunctionObj *function;
+    uint8_t *ip;
+    // This is the start of the usable stack. 
+    Value *sp;
+
     int currentStackIndex;
-    void (*onStdOut) (char*);
+} CallFrame;
+
+typedef struct VirtualMachine
+{
+    Value stack[256];
+    void (*onStdOut)(char *);
     HashMap global;
-    uint8_t* ip;
+
+    CallFrame frames[_NUM_CALL_FRAMES_];
+    int fp;
+
+    int currentStackIndex;
 } VirtualMachine;
 
-void initVirtualMachine(VirtualMachine*);
-void interpret(VirtualMachine*, Chunk*);
+void initVirtualMachine(VirtualMachine *);
+void interpret(VirtualMachine *);
 
-void push(VirtualMachine*, Value);
-Value peek(VirtualMachine*);
-Value pop(VirtualMachine*);
+// So given a function object, it should be able to set up a call stack for a function object?
+// So you are about to call a function, you need to 
+
+CallFrame* prepareForCall(VirtualMachine*, FunctionObj*);
+
+void push(VirtualMachine *, Value);
+Value peek(VirtualMachine *);
+Value pop(VirtualMachine *);
 
 #endif
