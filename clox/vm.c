@@ -360,7 +360,7 @@ static void interpretReturn(VirtualMachine *vm)
     vm->fp--;
     CallFrame *prevFrame = getCurrentFrame(vm);
 
-    int offset = -1 * (currentFrame->function->arity + 1);
+    int offset = currentFrame->function->arity + 1;
 
     prevFrame->currentStackIndex = prevFrame->currentStackIndex - offset;
     push(vm, returnValue);

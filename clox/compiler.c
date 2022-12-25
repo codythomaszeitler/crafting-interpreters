@@ -102,7 +102,7 @@ ParseRule rules[] = {
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
     [TOKEN_STRING] = {literal, NULL, PREC_FACTOR},
     [TOKEN_IDENTIFIER] = {identifier, NULL, PREC_CALL},
-    [TOKEN_LEFT_PAREN] = {NULL, callable, PREC_ASSIGNMENT},
+    [TOKEN_LEFT_PAREN] = {NULL, callable, PREC_CALL},
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR}};
 
 static ParseRule *getRule(TokenType tokenType)
@@ -326,6 +326,7 @@ void initInterpreter(Interpreter *interpreter)
 {
     initVirtualMachine(&interpreter->vm);
     interpreter->onStdOut = NULL;
+    interpreter->debugMode = false;
 }
 
 void freeInterpreter(Interpreter *interpreter)

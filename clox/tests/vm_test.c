@@ -344,9 +344,33 @@ void testItShouldBeAbleToDoLessThanOrEqualsToWhereLeftIsGreater()
     TEST_ASSERT_EQUAL_STRING("false", test_messages[0]);
 }
 
+void testItShouldBeAbleToDoInlineExpressionInFuncCall()
+{
+    const char *sourceCode = "{func foo(n) { return n;} print foo(5 - 3);}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("2.000000", test_messages[0]);
+}
+
+void testItShouldDoSimpleRecursionBaseCase()
+{
+    const char *sourceCode = "{func foo(n) { if (n <= 1) {return 1;} return n - 1; } print foo(1);}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
+}
+
+void testItShouldDoSimpleRecursion()
+{
+    const char *sourceCode = "{func foo(n) { if (n <= 1) {return 1;} return foo(n - 1); } print foo(2);}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
+}
+
 void testItShouldDoFibNumbers()
 {
-    const char *sourceCode = "{func fib(n) { if (n <= 1) {return n;} return fib (n - 2) + fib(n - 1);} print fib(2);}";
+    const char *sourceCode = "{func fib(n) { if (n <= 1) {return n;} return fib (n - 2) + fib(n - 1);} print fib(9);}";
     runInterpreter(&testObject, sourceCode);
     TEST_ASSERT_EQUAL(1, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("34.000000", test_messages[0]);
@@ -355,39 +379,42 @@ void testItShouldDoFibNumbers()
 int main(void)
 {
     UNITY_BEGIN();
-    // RUN_TEST(testItShouldRunBasicAddition);
-    // RUN_TEST(testItShouldDoComplexAdditionAndMultiplication);
-    // RUN_TEST(testItShouldDoComplexAdditionAndMultiplicationAndDivision);
-    // RUN_TEST(testItShouldPopTrueOntoTopOfStack);
-    // RUN_TEST(testItShouldPopFalseOntoTopOfStack);
-    // RUN_TEST(testItShouldDoEqualityBetweenTrueAndFalse);
-    // RUN_TEST(testItShouldPutStringOntoStack);
-    // RUN_TEST(testItShouldConcatStrings);
-    // RUN_TEST(testItShouldPrintSimpleExpression);
-    // RUN_TEST(testItShouldDoSimpleAssignmentAndPrint);
-    // RUN_TEST(testItShouldDoSimpleAdditionWithAssignment);
-    // RUN_TEST(testItShouldDoAssignmentWithDecl);
-    // RUN_TEST(testItShouldDoComplexExpressionInDecl);
-    // RUN_TEST(testIsShouldRunWithinABlock);
-    // RUN_TEST(testItShouldRunTwoBlocksAndPrintCorrectValues);
-    // RUN_TEST(testItShouldBeAbleToReadFromGlobalScope);
-    // RUN_TEST(testItShouldBeAbleToGoIntoIfConditional);
-    // RUN_TEST(testItShouldBeAbleToNotGoIntoIfConditional);
-    // RUN_TEST(testItShouldBeAbleToGoThroughWhileLoop);
-    // RUN_TEST(testItShouldBeAbleToGoThroughForLoop);
-    // RUN_TEST(testItShouldBeAbleToDefineAndUseFunction);
-    // RUN_TEST(testItShouldRunWithFunctionArgumentNoReturnValue);
-    // RUN_TEST(testItShouldRunWithFunctionArgumentWithReturnValue);
-    // RUN_TEST(testItShouldReturnNilWhenNoReturnGiven);
-    // RUN_TEST(testItShouldBeAbleToDoMultiLevelFunctionCalls);
-    // RUN_TEST(testItShouldDoMultiArgFunctionCalls);
-    // RUN_TEST(testItShouldBeAbleToDoFunctionCallsWithinExpression);
-    // RUN_TEST(testItShouldHaveTwoReturnsInFunction);
-    // RUN_TEST(testItShouldGoToBaseCase);
-    // RUN_TEST(testItShouldBeAbleToDoOrStatement);
-    // RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsTo);
-    // RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsToSameNum);
-    // RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsToWhereLeftIsGreater);
+    RUN_TEST(testItShouldRunBasicAddition);
+    RUN_TEST(testItShouldDoComplexAdditionAndMultiplication);
+    RUN_TEST(testItShouldDoComplexAdditionAndMultiplicationAndDivision);
+    RUN_TEST(testItShouldPopTrueOntoTopOfStack);
+    RUN_TEST(testItShouldPopFalseOntoTopOfStack);
+    RUN_TEST(testItShouldDoEqualityBetweenTrueAndFalse);
+    RUN_TEST(testItShouldPutStringOntoStack);
+    RUN_TEST(testItShouldConcatStrings);
+    RUN_TEST(testItShouldPrintSimpleExpression);
+    RUN_TEST(testItShouldDoSimpleAssignmentAndPrint);
+    RUN_TEST(testItShouldDoSimpleAdditionWithAssignment);
+    RUN_TEST(testItShouldDoAssignmentWithDecl);
+    RUN_TEST(testItShouldDoComplexExpressionInDecl);
+    RUN_TEST(testIsShouldRunWithinABlock);
+    RUN_TEST(testItShouldRunTwoBlocksAndPrintCorrectValues);
+    RUN_TEST(testItShouldBeAbleToReadFromGlobalScope);
+    RUN_TEST(testItShouldBeAbleToGoIntoIfConditional);
+    RUN_TEST(testItShouldBeAbleToNotGoIntoIfConditional);
+    RUN_TEST(testItShouldBeAbleToGoThroughWhileLoop);
+    RUN_TEST(testItShouldBeAbleToGoThroughForLoop);
+    RUN_TEST(testItShouldBeAbleToDefineAndUseFunction);
+    RUN_TEST(testItShouldRunWithFunctionArgumentNoReturnValue);
+    RUN_TEST(testItShouldRunWithFunctionArgumentWithReturnValue);
+    RUN_TEST(testItShouldReturnNilWhenNoReturnGiven);
+    RUN_TEST(testItShouldBeAbleToDoMultiLevelFunctionCalls);
+    RUN_TEST(testItShouldDoMultiArgFunctionCalls);
+    RUN_TEST(testItShouldBeAbleToDoFunctionCallsWithinExpression);
+    RUN_TEST(testItShouldHaveTwoReturnsInFunction);
+    RUN_TEST(testItShouldGoToBaseCase);
+    RUN_TEST(testItShouldBeAbleToDoOrStatement);
+    RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsTo);
+    RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsToSameNum);
+    RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsToWhereLeftIsGreater);
+    RUN_TEST(testItShouldBeAbleToDoInlineExpressionInFuncCall);
+    RUN_TEST(testItShouldDoSimpleRecursionBaseCase);
+    RUN_TEST(testItShouldDoSimpleRecursion);
     RUN_TEST(testItShouldDoFibNumbers);
     return UNITY_END();
 }
