@@ -370,7 +370,8 @@ void testItShouldDoSimpleRecursion()
 
 void testItShouldDoFibNumbers()
 {
-    const char *sourceCode = "{func fib(n) { if (n <= 1) {return n;} return fib (n - 2) + fib(n - 1);} print fib(9);}";
+    const char *sourceCode = "{func fib(n) { if (n <= 1) {return n;} return fib (n - 2) + fib(n - 1);} print fib(1);}";
+    testObject.debugMode = true;
     runInterpreter(&testObject, sourceCode);
     TEST_ASSERT_EQUAL(1, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("34.000000", test_messages[0]);

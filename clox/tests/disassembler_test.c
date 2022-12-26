@@ -63,12 +63,11 @@ void testItShouldPrintReturnStatement()
 
 void testItShouldDisassemblePrintOpCode()
 {
-    void (*toCall)(char *message) = logWhenDisassemble;
-    writeChunk(&bytecode, OP_STACK_PEEK);
+    writeChunk(&bytecode, OP_PRINT);
 
-    disassembleChunk(&bytecode, "test chunk", toCall);
+    disassembleChunk(&bytecode, "test chunk", logWhenDisassemble);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", disassembler_test_messages[0]);
-    TEST_ASSERT_EQUAL_STRING("0000 OP_STACK_PRINT\n", disassembler_test_messages[1]);
+    TEST_ASSERT_EQUAL_STRING("0000 OP_PRINT\n", disassembler_test_messages[1]);
 }
 
 void testItShouldChewThroughNonOpCodes()

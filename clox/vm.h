@@ -29,6 +29,7 @@ typedef struct VirtualMachine
 
     CallFrame frames[_NUM_CALL_FRAMES_];
     int fp;
+    bool debugMode;
 
     int currentStackIndex;
 } VirtualMachine;

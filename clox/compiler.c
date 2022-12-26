@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include "functionobj.h"
 #include <stdio.h>
+#include "disassembler.h"
 
 typedef struct VariableBindingStackLocation
 {
@@ -44,7 +45,7 @@ static FunctionCompiler *getCurrentCompiler(Parser *parser)
     return current;
 }
 
-// So if we want to, we could print out all of the byte code 
+// So if we want to, we could print out all of the byte code
 static Chunk *getCurrentCompilerBytecode(Parser *parser)
 {
     return getCurrentCompiler(parser)->compiling->bytecode;
@@ -176,7 +177,7 @@ static FunctionObj *getFunctionObj(Parser *parser, const char *functionName)
             int functionConstantIndex = (int)unwrapNumber(functionIfExists);
 
             freeStringObj(functionNameAsString);
-            return (FunctionObj*)unwrapObject(getConstantAt(compiler->compiling->bytecode, functionConstantIndex));
+            return (FunctionObj *)unwrapObject(getConstantAt(compiler->compiling->bytecode, functionConstantIndex));
         }
     }
 
@@ -379,10 +380,10 @@ void runInterpreter(Interpreter *interpreter, const char *sourceCode)
     initFunctionObj(&functionObj);
 
     TokenArrayIterator tokens = tokenize(sourceCode);
-    // what the fuck
     compile(&functionObj, &tokens);
 
     interpreter->vm.onStdOut = interpreter->onStdOut;
+    interpreter->vm.debugMode = interpreter->debugMode;
     prepareForCall(&interpreter->vm, &functionObj);
     interpret(&interpreter->vm);
 

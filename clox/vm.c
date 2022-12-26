@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "disassembler.h"
 
 static void stdOutPrinter(char *toPrint)
 {
@@ -310,6 +311,12 @@ static void interpretJump(VirtualMachine *vm)
     vm->frames[vm->fp].ip = &vm->frames[vm->fp].function->bytecode->code[jumpLocation];
 }
 
+static void stdSysOut(char *message)
+{
+    printf(message);
+    free(message);
+}
+
 CallFrame *prepareForCall(VirtualMachine *vm, FunctionObj *functionObj)
 {
     vm->fp++;
@@ -318,6 +325,12 @@ CallFrame *prepareForCall(VirtualMachine *vm, FunctionObj *functionObj)
     newFrame->ip = functionObj->bytecode->code;
     newFrame->currentStackIndex = 0;
     newFrame->sp = &vm->stack[vm->currentStackIndex + 1];
+
+    if (vm->debugMode)
+    {
+        disassembleChunk(functionObj->bytecode, functionObj->name->chars, stdSysOut);
+    }
+
     return newFrame;
 }
 
@@ -337,6 +350,11 @@ static void interpretCall(VirtualMachine *vm)
     nextFrame->function = toRun;
     nextFrame->sp = startOfFunctionCall + 1;
     nextFrame->ip = toRun->bytecode->code;
+
+    if (vm->debugMode)
+    {
+        disassembleChunk(toRun->bytecode, toRun->name->chars, stdSysOut);
+    }
 
     vm->fp++;
 }
@@ -388,7 +406,7 @@ static void interpretOr(VirtualMachine *vm)
     currentFrame->ip = currentFrame->ip + 1;
 }
 
-static void interpretLessThanOrEquals(VirtualMachine *vm) 
+static void interpretLessThanOrEquals(VirtualMachine *vm)
 {
     CallFrame *currentFrame = getCurrentFrame(vm);
 

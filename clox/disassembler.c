@@ -84,6 +84,18 @@ uint8_t disassembleInstruction(Chunk *bytecode, int index, void (*logger)(char *
 
         return 1;
     }
+    else if (opCode == OP_PRINT)
+    {
+        const char *opCodeAsString = "OP_PRINT";
+        int length = snprintf(NULL, 0, "%04d %s\n", index, opCodeAsString);
+        char *line = malloc(sizeof(char) * length + 1);
+
+        snprintf(line, length + 1, "%04d %s\n", index, opCodeAsString);
+
+        logger(line);
+
+        return 1;
+    }
     else if (opCode == OP_ADD)
     {
         const char *opCodeAsString = "OP_ADD";
