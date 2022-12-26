@@ -23,6 +23,7 @@ typedef enum {
 typedef struct Interpreter {
     void (*onStdOut) (char*);
     VirtualMachine vm;
+    bool debugMode;
 } Interpreter;
 
 void initInterpreter(Interpreter*);

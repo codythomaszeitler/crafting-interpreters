@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include "disassembler.h"
 
 static void stdOutPrinter(char *toPrint)
 {
@@ -310,6 +311,12 @@ static void interpretJump(VirtualMachine *vm)
     vm->frames[vm->fp].ip = &vm->frames[vm->fp].function->bytecode->code[jumpLocation];
 }
 
+static void stdSysOut(char *message)
+{
+    printf(message);
+    free(message);
+}
+
 CallFrame *prepareForCall(VirtualMachine *vm, FunctionObj *functionObj)
 {
     vm->fp++;
@@ -318,6 +325,12 @@ CallFrame *prepareForCall(VirtualMachine *vm, FunctionObj *functionObj)
     newFrame->ip = functionObj->bytecode->code;
     newFrame->currentStackIndex = 0;
     newFrame->sp = &vm->stack[vm->currentStackIndex + 1];
+
+    if (vm->debugMode)
+    {
+        disassembleChunk(functionObj->bytecode, functionObj->name->chars, stdSysOut);
+    }
+
     return newFrame;
 }
 
@@ -337,6 +350,11 @@ static void interpretCall(VirtualMachine *vm)
     nextFrame->function = toRun;
     nextFrame->sp = startOfFunctionCall + 1;
     nextFrame->ip = toRun->bytecode->code;
+
+    if (vm->debugMode)
+    {
+        disassembleChunk(toRun->bytecode, toRun->name->chars, stdSysOut);
+    }
 
     vm->fp++;
 }
@@ -360,7 +378,7 @@ static void interpretReturn(VirtualMachine *vm)
     vm->fp--;
     CallFrame *prevFrame = getCurrentFrame(vm);
 
-    int offset = -1 * (currentFrame->function->arity + 1);
+    int offset = currentFrame->function->arity + 1;
 
     prevFrame->currentStackIndex = prevFrame->currentStackIndex - offset;
     push(vm, returnValue);
@@ -369,6 +387,39 @@ static void interpretReturn(VirtualMachine *vm)
     currentFrame->currentStackIndex = 0;
     currentFrame->ip = NULL;
     currentFrame->sp = NULL;
+}
+
+static void interpretOr(VirtualMachine *vm)
+{
+    CallFrame *currentFrame = getCurrentFrame(vm);
+
+    Value right = pop(vm);
+    Value left = pop(vm);
+
+    bool rightBool = unwrapBool(right);
+    bool leftBool = unwrapBool(left);
+
+    bool resultBool = leftBool || rightBool;
+    Value result = wrapBool(resultBool);
+    push(vm, result);
+
+    currentFrame->ip = currentFrame->ip + 1;
+}
+
+static void interpretLessThanOrEquals(VirtualMachine *vm)
+{
+    CallFrame *currentFrame = getCurrentFrame(vm);
+
+    Value right = pop(vm);
+    Value left = pop(vm);
+
+    double rightNum = unwrapNumber(right);
+    double leftNum = unwrapNumber(left);
+
+    Value result = wrapBool(leftNum <= rightNum);
+    push(vm, result);
+
+    currentFrame->ip = currentFrame->ip + 1;
 }
 
 static bool isAtEndOfBytecode(VirtualMachine *vm)
@@ -455,6 +506,12 @@ void interpret(VirtualMachine *vm)
             break;
         case OP_RETURN:
             interpretReturn(vm);
+            break;
+        case OP_OR:
+            interpretOr(vm);
+            break;
+        case OP_LESS_THAN_EQUALS:
+            interpretLessThanOrEquals(vm);
             break;
         default:
             printf("Invalid op code.");

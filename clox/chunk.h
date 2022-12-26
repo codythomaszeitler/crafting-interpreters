@@ -28,7 +28,9 @@ typedef enum {
     OP_JUMP,
     OP_LOOP,
     OP_LESS_THAN,
-    OP_CALL
+    OP_LESS_THAN_EQUALS,
+    OP_CALL,
+    OP_OR
 } OpCode;
 
 uint8_t getByteLengthFor(OpCode opCode);

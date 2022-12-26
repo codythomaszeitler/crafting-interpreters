@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include "functionobj.h"
 #include <stdio.h>
+#include "disassembler.h"
 
 typedef struct VariableBindingStackLocation
 {
@@ -44,6 +45,7 @@ static FunctionCompiler *getCurrentCompiler(Parser *parser)
     return current;
 }
 
+// So if we want to, we could print out all of the byte code
 static Chunk *getCurrentCompilerBytecode(Parser *parser)
 {
     return getCurrentCompiler(parser)->compiling->bytecode;
@@ -94,6 +96,8 @@ ParseRule rules[] = {
     [TOKEN_MINUS] = {unary, binary, PREC_UNARY},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_LESS] = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_LESS_EQUAL] = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_OR] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_BANG_EQUAL] = {NULL, binary, PREC_EQUALITY},
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
@@ -141,15 +145,62 @@ static void literal(Parser *parser)
 static bool isFunction(Parser *parser, const char *functionName)
 {
     StringObj *functionNameAsString = asString(functionName);
-    Value functionIfExists = hashMapGet(getCurrentCompilerFunctions(parser), functionNameAsString);
+
+    for (int i = parser->depth; i >= 0; i--)
+    {
+        FunctionCompiler *compiler = &parser->compilers[i];
+        Value functionIfExists = hashMapGet(&compiler->functions, functionNameAsString);
+
+        if (!isNil(functionIfExists))
+        {
+            freeStringObj(functionNameAsString);
+            return true;
+        }
+    }
+
+    freeStringObj(functionNameAsString);
+    return false;
+}
+
+static FunctionObj *getFunctionObj(Parser *parser, const char *functionName)
+{
+    StringObj *functionNameAsString = asString(functionName);
+
+    for (int i = parser->depth; i >= 0; i--)
+    {
+        FunctionCompiler *compiler = &parser->compilers[i];
+        Value functionIfExists = hashMapGet(&compiler->functions, functionNameAsString);
+
+        if (!isNil(functionIfExists))
+        {
+            // So at this moment... there is a constant in the bytecode that has our function in it...
+            int functionConstantIndex = (int)unwrapNumber(functionIfExists);
+
+            freeStringObj(functionNameAsString);
+            return (FunctionObj *)unwrapObject(getConstantAt(compiler->compiling->bytecode, functionConstantIndex));
+        }
+    }
+
+    freeStringObj(functionNameAsString);
+    return NULL;
+}
+
+static bool isLocallyDefinedFunction(Parser *parser, const char *functionName)
+{
+    FunctionCompiler *compiler = getCurrentCompiler(parser);
+
+    StringObj *functionNameAsString = asString(functionName);
+    Value functionIfExists = hashMapGet(&compiler->functions, functionNameAsString);
     freeStringObj(functionNameAsString);
     return !isNil(functionIfExists);
 }
 
-static uint8_t getFunctionConstantLocation(Parser *parser, const char *functionName)
+static uint8_t getLocalFunctionConstantLocation(Parser *parser, const char *functionName)
 {
+    FunctionCompiler *compiler = getCurrentCompiler(parser);
+
     StringObj *functionNameAsString = asString(functionName);
-    Value functionIfExists = hashMapGet(getCurrentCompilerFunctions(parser), functionNameAsString);
+    Value functionIfExists = hashMapGet(&compiler->functions, functionNameAsString);
     freeStringObj(functionNameAsString);
     return unwrapNumber(functionIfExists);
 }
@@ -157,6 +208,9 @@ static uint8_t getFunctionConstantLocation(Parser *parser, const char *functionN
 static void callable(Parser *parser)
 {
     popToken(parser->tokens);
+    // ParseRule *parseRule = getRule(operator.type);
+
+    // parseExpression(parseRule->Precedence + 1, parser);
     uint8_t functionArgumentCount = 0;
 
     if (peekAtToken(parser->tokens).type != TOKEN_RIGHT_PAREN)
@@ -184,9 +238,22 @@ static void identifier(Parser *parser)
     {
         if (isFunction(parser, shouldBeId.lexeme))
         {
-            int constantLocation = getFunctionConstantLocation(parser, shouldBeId.lexeme);
-            writeChunk(getCurrentCompilerBytecode(parser), OP_CONSTANT);
-            writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
+            if (isLocallyDefinedFunction(parser, shouldBeId.lexeme))
+            {
+                int constantLocation = getLocalFunctionConstantLocation(parser, shouldBeId.lexeme);
+                writeChunk(getCurrentCompilerBytecode(parser), OP_CONSTANT);
+                writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
+            }
+            else
+            {
+                FunctionCompiler *currentCompiler = getCurrentCompiler(parser);
+                FunctionObj *functionObj = getFunctionObj(parser, shouldBeId.lexeme);
+                int constantIndex = addConstant(currentCompiler->compiling->bytecode, wrapObject((Obj *)functionObj));
+                hashMapPut(&currentCompiler->functions, functionObj->name, wrapNumber(constantIndex));
+
+                writeChunk(currentCompiler->compiling->bytecode, OP_CONSTANT);
+                writeChunk(currentCompiler->compiling->bytecode, constantIndex);
+            }
         }
         else if (isGlobalBinding(parser, shouldBeId))
         {
@@ -231,6 +298,14 @@ static void binary(Parser *parser)
     {
         writeChunk(getCurrentCompilerBytecode(parser), OP_LESS_THAN);
     }
+    else if (operator.type == TOKEN_OR)
+    {
+        writeChunk(getCurrentCompilerBytecode(parser), OP_OR);
+    }
+    else if (operator.type == TOKEN_LESS_EQUAL)
+    {
+        writeChunk(getCurrentCompilerBytecode(parser), OP_LESS_THAN_EQUALS);
+    }
     else if (operator.type == TOKEN_BANG_EQUAL)
     {
         writeChunk(getCurrentCompilerBytecode(parser), OP_EQUAL);
@@ -252,6 +327,7 @@ void initInterpreter(Interpreter *interpreter)
 {
     initVirtualMachine(&interpreter->vm);
     interpreter->onStdOut = NULL;
+    interpreter->debugMode = false;
 }
 
 void freeInterpreter(Interpreter *interpreter)
@@ -304,10 +380,10 @@ void runInterpreter(Interpreter *interpreter, const char *sourceCode)
     initFunctionObj(&functionObj);
 
     TokenArrayIterator tokens = tokenize(sourceCode);
-    // what the fuck
     compile(&functionObj, &tokens);
 
     interpreter->vm.onStdOut = interpreter->onStdOut;
+    interpreter->vm.debugMode = interpreter->debugMode;
     prepareForCall(&interpreter->vm, &functionObj);
     interpret(&interpreter->vm);
 
@@ -493,16 +569,19 @@ static void releaseLocals(Parser *parser, int numLocals)
 
 static void blockStatement(Parser *parser)
 {
+    FunctionCompiler *current = getCurrentCompiler(parser);
+    // This does not look semantically correct.
     popToken(parser->tokens);
 
     blockStart(parser);
-    int stackDepthStart = parser->depth;
+
+    int stackDepthStart = current->stackDepth;
     while (peekAtToken(parser->tokens).type != TOKEN_RIGHT_BRACE)
     {
         statement(parser);
     }
 
-    int numLocals = parser->depth - stackDepthStart;
+    int numLocals = current->stackDepth - stackDepthStart;
     releaseLocals(parser, numLocals);
 
     blockEnd(parser, stackDepthStart);
@@ -663,13 +742,19 @@ static int funcDeclArgs(Parser *parser)
 
     if (maybeRightParen.type != TOKEN_RIGHT_PAREN)
     {
-        Token funcArg = popToken(parser->tokens);
-        do
+        while (true)
         {
+            Token funcArg = popToken(parser->tokens);
+            Token commaOrParen = popToken(parser->tokens);
+
             defineVariableBinding(parser, funcArg);
             numFunctionArgs++;
-            funcArg = popToken(parser->tokens);
-        } while (funcArg.type != TOKEN_RIGHT_PAREN);
+
+            if (commaOrParen.type == TOKEN_RIGHT_PAREN)
+            {
+                break;
+            }
+        }
     }
     else
     {
@@ -688,13 +773,13 @@ static void funcDecl(Parser *parser)
 
     int numArgs = funcDeclArgs(parser);
     newLocalFunction->arity = numArgs;
-    
+
     blockStatement(parser);
     writeChunk(getCurrentCompilerBytecode(parser), OP_RETURN);
     undoCompilerFunction(parser);
 }
 
-static void returnStmt(Parser *parser) 
+static void returnStmt(Parser *parser)
 {
     popToken(parser->tokens);
     expression(parser);
@@ -738,7 +823,7 @@ static void statement(Parser *parser)
     {
         funcDecl(parser);
     }
-    else if (peeked.type == TOKEN_RETURN) 
+    else if (peeked.type == TOKEN_RETURN)
     {
         returnStmt(parser);
     }

@@ -271,15 +271,111 @@ void testItShouldReturnNilWhenNoReturnGiven()
     TEST_ASSERT_EQUAL_STRING("nil", test_messages[1]);
 }
 
-// int main(void)
-// {
-//     UNITY_BEGIN();
-//     RUN_TEST(testItShouldBeAbleToAddConstantToVMStack);
-//     RUN_TEST(testItShouldBeAbleToDoMultiplication);
-//     RUN_TEST(testItShouldBeAbleToDoDivision);
-//     RUN_TEST(testItShouldBeAbleToDoSubtraction);
-//     return UNITY_END();
-// }
+void testItShouldBeAbleToDoMultiLevelFunctionCalls()
+{
+    const char *sourceCode = "{ func foo(a) { func bar(b) { print b;} bar(a); } foo(5); }";
+
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("5.000000", test_messages[0]);
+}
+
+void testItShouldDoMultiArgFunctionCalls()
+{
+    const char *sourceCode = "{ func foo(a, b, c) { print a + b + c;} foo(1, 2, 3); }";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("6.000000", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoFunctionCallsWithinExpression()
+{
+    const char *sourceCode = "{ func foo(a) {return a + 1;} var c = foo(1) + foo(2) + foo(3); print c; }";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("9.000000", test_messages[0]);
+}
+
+void testItShouldHaveTwoReturnsInFunction()
+{
+    const char *sourceCode = "{func foo(a) { if (a <= 1) {return a;} return a + 1;} var c = foo(2); print c;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("3.000000", test_messages[0]);
+}
+
+void testItShouldGoToBaseCase()
+{
+    const char *sourceCode = "{func foo(a) { if (a <= 1) {return a;} return a + 1;} var c = foo(1); print c;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoOrStatement()
+{
+    const char *sourceCode = "{ var a = true || false; print a;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("true", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoLessThanOrEqualsTo()
+{
+    const char *sourceCode = "{ var a = 2 <= 5; print a;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("true", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoLessThanOrEqualsToSameNum()
+{
+    const char *sourceCode = "{ var a = 5 <= 5; print a;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("true", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoLessThanOrEqualsToWhereLeftIsGreater()
+{
+    const char *sourceCode = "{ var a = 6 <= 5; print a;}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("false", test_messages[0]);
+}
+
+void testItShouldBeAbleToDoInlineExpressionInFuncCall()
+{
+    const char *sourceCode = "{func foo(n) { return n;} print foo(5 - 3);}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("2.000000", test_messages[0]);
+}
+
+void testItShouldDoSimpleRecursionBaseCase()
+{
+    const char *sourceCode = "{func foo(n) { if (n <= 1) {return 1;} return n - 1; } print foo(1);}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
+}
+
+void testItShouldDoSimpleRecursion()
+{
+    const char *sourceCode = "{func foo(n) { if (n <= 1) {return 1;} return foo(n - 1); } print foo(2);}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
+}
+
+void testItShouldDoFibNumbers()
+{
+    const char *sourceCode = "{func fib(n) { if (n <= 1) {return n;} return fib (n - 2) + fib(n - 1);} print fib(1);}";
+    testObject.debugMode = true;
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("34.000000", test_messages[0]);
+}
 
 int main(void)
 {
@@ -308,5 +404,18 @@ int main(void)
     RUN_TEST(testItShouldRunWithFunctionArgumentNoReturnValue);
     RUN_TEST(testItShouldRunWithFunctionArgumentWithReturnValue);
     RUN_TEST(testItShouldReturnNilWhenNoReturnGiven);
+    RUN_TEST(testItShouldBeAbleToDoMultiLevelFunctionCalls);
+    RUN_TEST(testItShouldDoMultiArgFunctionCalls);
+    RUN_TEST(testItShouldBeAbleToDoFunctionCallsWithinExpression);
+    RUN_TEST(testItShouldHaveTwoReturnsInFunction);
+    RUN_TEST(testItShouldGoToBaseCase);
+    RUN_TEST(testItShouldBeAbleToDoOrStatement);
+    RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsTo);
+    RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsToSameNum);
+    RUN_TEST(testItShouldBeAbleToDoLessThanOrEqualsToWhereLeftIsGreater);
+    RUN_TEST(testItShouldBeAbleToDoInlineExpressionInFuncCall);
+    RUN_TEST(testItShouldDoSimpleRecursionBaseCase);
+    RUN_TEST(testItShouldDoSimpleRecursion);
+    RUN_TEST(testItShouldDoFibNumbers);
     return UNITY_END();
 }
