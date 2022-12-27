@@ -370,11 +370,18 @@ void testItShouldDoSimpleRecursion()
 
 void testItShouldDoFibNumbers()
 {
-    const char *sourceCode = "{func fib(n) { if (n <= 1) {return n;} return fib (n - 2) + fib(n - 1);} print fib(1);}";
-    testObject.debugMode = true;
+    const char *sourceCode = "{func fib(n) { if (n <= 1) {return n;} return fib (n - 2) + fib(n - 1);} print fib(9);}";
     runInterpreter(&testObject, sourceCode);
     TEST_ASSERT_EQUAL(1, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("34.000000", test_messages[0]);
+}
+
+void testItShouldBeAbleToReturnACallAFunction()
+{
+    const char *sourceCode = "{ func foo() { func bar() {print 1; } return bar; } var a = foo(); a();}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
 }
 
 int main(void)
@@ -417,5 +424,6 @@ int main(void)
     RUN_TEST(testItShouldDoSimpleRecursionBaseCase);
     RUN_TEST(testItShouldDoSimpleRecursion);
     RUN_TEST(testItShouldDoFibNumbers);
+    RUN_TEST(testItShouldBeAbleToReturnACallAFunction);
     return UNITY_END();
 }

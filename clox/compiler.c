@@ -45,7 +45,6 @@ static FunctionCompiler *getCurrentCompiler(Parser *parser)
     return current;
 }
 
-// So if we want to, we could print out all of the byte code
 static Chunk *getCurrentCompilerBytecode(Parser *parser)
 {
     return getCurrentCompiler(parser)->compiling->bytecode;
@@ -142,6 +141,41 @@ static void literal(Parser *parser)
     }
 }
 
+// Checking if something is a function might be the wrong bet?
+// So in the foo case that I am currently looking at,
+// we could go up the function tree and find a function at RUNTIME?
+// What would that mean I would have to do?
+// Fuck that has to be sooo slow though?
+// So the problem is is that my function is stored in the following manner:
+
+// Value of 2 as number, is an index into the constant array of the current function.
+// If you were to return this value of 2 to someone else, it would not make any sense.
+// So what do we need to do now?
+
+// So when you run into an identifier DURING RUNTIME maybe you should check if the given
+// thing is a function or not, then run accordingly.
+
+// OR better yet, when someone is to receive a value it is up to them to call it properly.
+// If it is not callable, you are out of luck.
+
+// How here's the thing...
+// Is there an  efficient way of figuring out where a  fuction lives without having to go through maps?
+// Its odd that I use a constant... it really should be through a identifier right?
+// It could be w/e is on the stack at the moment?
+// You are just going to call w/e is on the bottom of the call stack?
+//
+// When you define a function, it can do the following things:
+// 1) The block is the enclosing scope of where a function is defined.
+// A function is scoped within the block in which its defined?
+// If you are trying to call something, what happens?
+// The value must be of a function obj.
+// Thus, the value must be OBJECT value whose pointer is going to FunctionObj.
+// How does this work on the identifier.
+// So when are you compiling something...
+// Wait if we keep the function within the constant.
+// Have a map from name to constant value.
+// So if you are trying to figure
+
 static bool isFunction(Parser *parser, const char *functionName)
 {
     StringObj *functionNameAsString = asString(functionName);
@@ -208,9 +242,6 @@ static uint8_t getLocalFunctionConstantLocation(Parser *parser, const char *func
 static void callable(Parser *parser)
 {
     popToken(parser->tokens);
-    // ParseRule *parseRule = getRule(operator.type);
-
-    // parseExpression(parseRule->Precedence + 1, parser);
     uint8_t functionArgumentCount = 0;
 
     if (peekAtToken(parser->tokens).type != TOKEN_RIGHT_PAREN)
@@ -257,16 +288,46 @@ static void identifier(Parser *parser)
         }
         else if (isGlobalBinding(parser, shouldBeId))
         {
-            int constantLocation = addConstant(getCurrentCompilerBytecode(parser), wrapString(shouldBeId.lexeme));
-            writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_GLOBAL_EXPRESSION);
-            writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
+            FunctionCompiler *currentCompiler = getCurrentCompiler(parser);
+            Token maybeEquals = peekAtToken(parser->tokens);
+
+            if (maybeEquals.type == TOKEN_EQUAL)
+            {
+                popToken(parser->tokens);
+                expression(parser);
+
+                writeChunk(currentCompiler->compiling->bytecode, OP_VAR_GLOBAL_ASSIGN);
+                int constantLocation = addConstant(currentCompiler->compiling->bytecode, wrapString(shouldBeId.lexeme));
+                writeChunk(currentCompiler->compiling->bytecode, constantLocation);
+            }
+            else
+            {
+                int constantLocation = addConstant(currentCompiler->compiling->bytecode, wrapString(shouldBeId.lexeme));
+                writeChunk(currentCompiler->compiling->bytecode, OP_VAR_GLOBAL_EXPRESSION);
+                writeChunk(currentCompiler->compiling->bytecode, constantLocation);
+            }
         }
         else
         {
-            uint8_t stackLocation = getVariableBinding(parser, shouldBeId);
+            FunctionCompiler *currentCompiler = getCurrentCompiler(parser);
+            Token maybeEquals = peekAtToken(parser->tokens);
+            if (maybeEquals.type == TOKEN_EQUAL)
+            {
 
-            writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_EXPRESSION);
-            writeChunk(getCurrentCompilerBytecode(parser), stackLocation);
+                popToken(parser->tokens);
+                expression(parser);
+
+                writeChunk(currentCompiler->compiling->bytecode, OP_VAR_ASSIGN);
+                uint8_t offset = getVariableBinding(parser, shouldBeId);
+                writeChunk(currentCompiler->compiling->bytecode, offset);
+            }
+            else
+            {
+                uint8_t stackLocation = getVariableBinding(parser, shouldBeId);
+
+                writeChunk(currentCompiler->compiling->bytecode, OP_VAR_EXPRESSION);
+                writeChunk(currentCompiler->compiling->bytecode, stackLocation);
+            }
         }
     }
 }
@@ -510,42 +571,6 @@ static void expressionStatement(Parser *parser)
     popToken(parser->tokens);
 }
 
-static void varAssign(Parser *parser)
-{
-    Token identifier = popToken(parser->tokens);
-    popToken(parser->tokens);
-
-    expression(parser);
-
-    if (isGlobalBinding(parser, identifier))
-    {
-        writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_GLOBAL_ASSIGN);
-        int constantLocation = addConstant(getCurrentCompilerBytecode(parser), wrapString(identifier.lexeme));
-        writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
-    }
-    else
-    {
-        writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_ASSIGN);
-        uint8_t offset = getVariableBinding(parser, identifier);
-        writeChunk(getCurrentCompilerBytecode(parser), offset);
-    }
-
-    popToken(parser->tokens);
-}
-
-static void varAssignOrFunctionExpr(Parser *parser)
-{
-    Token identifier = peekAtToken(parser->tokens);
-    if (isFunction(parser, identifier.lexeme))
-    {
-        expressionStatement(parser);
-    }
-    else
-    {
-        varAssign(parser);
-    }
-}
-
 static void blockStart(Parser *parser)
 {
     FunctionCompiler *current = getCurrentCompiler(parser);
@@ -676,7 +701,8 @@ static int compileUpdateStatements(Parser *parser, int startOfExpressionLocation
     Token varAssignOrSemicolon = peekAtToken(parser->tokens);
     if (varAssignOrSemicolon.type == TOKEN_IDENTIFIER)
     {
-        varAssignOrFunctionExpr(parser);
+        expression(parser);
+        popToken(parser->tokens);
     }
     else
     {
@@ -801,7 +827,8 @@ static void statement(Parser *parser)
     }
     else if (peeked.type == TOKEN_IDENTIFIER)
     {
-        varAssignOrFunctionExpr(parser);
+        expression(parser);
+        popToken(parser->tokens);
     }
     else if (peeked.type == TOKEN_LEFT_BRACE)
     {
@@ -829,7 +856,7 @@ static void statement(Parser *parser)
     }
     else
     {
-        expression(parser);
+        expressionStatement(parser);
     }
 }
 
