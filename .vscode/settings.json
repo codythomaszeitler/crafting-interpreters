@@ -15,7 +15,8 @@
         "limits": "c",
         "new": "c",
         "typeinfo": "c",
-        "VALUE.H": "cpp"
+        "VALUE.H": "cpp",
+        "*.tcc": "c"
     },
     "C_Cpp.errorSquiggles": "Disabled",
     "cSpell.words": [

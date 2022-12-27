@@ -26,6 +26,28 @@ bool isFunctionObj(Value value)
 
 FunctionObj *unwrapFunctionObj(Value value)
 {
-    FunctionObj* compiledFunction = (FunctionObj*) unwrapObject(value);
+    FunctionObj *compiledFunction = (FunctionObj *)unwrapObject(value);
     return compiledFunction;
+}
+
+void initClosureObj(ClosureObj *closureObj)
+{
+    closureObj->base.type = ObjClosure;
+    closureObj->function = NULL;
+}
+
+void freeClosureObj(ClosureObj *closureObj)
+{
+}
+
+bool isClosureObj(Value value)
+{
+    Obj *asBaseObject = unwrapObject(value);
+    return asBaseObject->type == ObjClosure;
+}
+
+ClosureObj *unwrapClosureObj(Value value)
+{
+    ClosureObj *closure = (ClosureObj*) unwrapObject(value);
+    return closure;
 }

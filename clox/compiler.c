@@ -261,6 +261,27 @@ static void callable(Parser *parser)
     writeChunk(getCurrentCompilerBytecode(parser), functionArgumentCount);
 }
 
+static void functionIdExpr(Parser *parser, Token shouldBeId)
+{
+    FunctionCompiler *currentCompiler = getCurrentCompiler(parser);
+    int constantLocation = -1;
+    if (isLocallyDefinedFunction(parser, shouldBeId.lexeme))
+    {
+        constantLocation = getLocalFunctionConstantLocation(parser, shouldBeId.lexeme);
+    }
+    else
+    {
+        FunctionObj *functionObj = getFunctionObj(parser, shouldBeId.lexeme);
+        constantLocation = addConstant(currentCompiler->compiling->bytecode, wrapObject((Obj *)functionObj));
+        hashMapPut(&currentCompiler->functions, functionObj->name, wrapNumber(constantLocation));
+    }
+
+    writeChunk(currentCompiler->compiling->bytecode, OP_CONSTANT);
+    writeChunk(currentCompiler->compiling->bytecode, constantLocation);
+
+    writeChunk(currentCompiler->compiling->bytecode, OP_CLOSURE);
+}
+
 static void identifier(Parser *parser)
 {
     Token shouldBeId = popToken(parser->tokens);
@@ -269,22 +290,7 @@ static void identifier(Parser *parser)
     {
         if (isFunction(parser, shouldBeId.lexeme))
         {
-            if (isLocallyDefinedFunction(parser, shouldBeId.lexeme))
-            {
-                int constantLocation = getLocalFunctionConstantLocation(parser, shouldBeId.lexeme);
-                writeChunk(getCurrentCompilerBytecode(parser), OP_CONSTANT);
-                writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
-            }
-            else
-            {
-                FunctionCompiler *currentCompiler = getCurrentCompiler(parser);
-                FunctionObj *functionObj = getFunctionObj(parser, shouldBeId.lexeme);
-                int constantIndex = addConstant(currentCompiler->compiling->bytecode, wrapObject((Obj *)functionObj));
-                hashMapPut(&currentCompiler->functions, functionObj->name, wrapNumber(constantIndex));
-
-                writeChunk(currentCompiler->compiling->bytecode, OP_CONSTANT);
-                writeChunk(currentCompiler->compiling->bytecode, constantIndex);
-            }
+            functionIdExpr(parser, shouldBeId); 
         }
         else if (isGlobalBinding(parser, shouldBeId))
         {

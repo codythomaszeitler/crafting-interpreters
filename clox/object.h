@@ -3,7 +3,8 @@
 
 typedef enum ObjType {
     ObjString,
-    ObjFunction
+    ObjFunction,
+    ObjClosure
 } ObjType;
 
 typedef struct Obj {

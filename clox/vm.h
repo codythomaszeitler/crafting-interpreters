@@ -13,9 +13,8 @@
 
 typedef struct CallFrame
 {
-    FunctionObj *function;
+    ClosureObj *closure;
     uint8_t *ip;
-    // This is the start of the usable stack. 
     Value *sp;
 
     int currentStackIndex;
@@ -30,15 +29,10 @@ typedef struct VirtualMachine
     CallFrame frames[_NUM_CALL_FRAMES_];
     int fp;
     bool debugMode;
-
-    int currentStackIndex;
 } VirtualMachine;
 
 void initVirtualMachine(VirtualMachine *);
 void interpret(VirtualMachine *);
-
-// So given a function object, it should be able to set up a call stack for a function object?
-// So you are about to call a function, you need to 
 
 CallFrame* prepareForCall(VirtualMachine*, FunctionObj*);
 

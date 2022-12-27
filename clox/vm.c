@@ -34,7 +34,7 @@ static uint8_t *getCurrentIp(VirtualMachine *vm)
 static Value getCurrentFrameConstantAt(VirtualMachine *vm, int index)
 {
     CallFrame *currentFrame = getCurrentFrame(vm);
-    Value constant = getConstantAt(currentFrame->function->bytecode, index);
+    Value constant = getConstantAt(currentFrame->closure->function->bytecode, index);
     return constant;
 }
 
@@ -48,7 +48,7 @@ void initVirtualMachine(VirtualMachine *vm)
     for (int i = 0; i < _NUM_CALL_FRAMES_; i++)
     {
         vm->frames[i].ip = NULL;
-        vm->frames[i].function = NULL;
+        vm->frames[i].closure = NULL;
         vm->frames[i].sp = NULL;
     }
 }
@@ -288,7 +288,7 @@ static void interpretJumpIfFalse(VirtualMachine *vm)
         uint8_t msb = *(vm->frames[vm->fp].ip + 1);
         uint8_t lsb = *(vm->frames[vm->fp].ip + 2);
         uint16_t jumpLocation = (msb << 8) | lsb;
-        vm->frames[vm->fp].ip = &vm->frames[vm->fp].function->bytecode->code[jumpLocation];
+        vm->frames[vm->fp].ip = &vm->frames[vm->fp].closure->function->bytecode->code[jumpLocation];
     }
     else
     {
@@ -308,7 +308,7 @@ static void interpretJump(VirtualMachine *vm)
     uint8_t lsb = *(vm->frames[vm->fp].ip + 2);
     uint16_t jumpLocation = (msb << 8) | lsb;
 
-    vm->frames[vm->fp].ip = &vm->frames[vm->fp].function->bytecode->code[jumpLocation];
+    vm->frames[vm->fp].ip = &vm->frames[vm->fp].closure->function->bytecode->code[jumpLocation];
 }
 
 static void stdSysOut(char *message)
@@ -321,10 +321,16 @@ CallFrame *prepareForCall(VirtualMachine *vm, FunctionObj *functionObj)
 {
     vm->fp++;
     CallFrame *newFrame = getCurrentFrame(vm);
-    newFrame->function = functionObj;
-    newFrame->ip = functionObj->bytecode->code;
+
+    // So at this moment, we need to wrap this function obj into a closure. 
+    ClosureObj *closure = malloc(sizeof(ClosureObj));
+    initClosureObj(closure);
+    closure->function = functionObj;
+
+    newFrame->closure = closure;
+    newFrame->ip = closure->function->bytecode->code;
     newFrame->currentStackIndex = 0;
-    newFrame->sp = &vm->stack[vm->currentStackIndex + 1];
+    newFrame->sp = &vm->stack[0];
 
     if (vm->debugMode)
     {
@@ -343,17 +349,17 @@ static void interpretCall(VirtualMachine *vm)
     currentFrame->ip = currentFrame->ip + 2;
     Value *startOfFunctionCall = &currentFrame->sp[currentFrame->currentStackIndex - argumentCount - 1];
 
-    FunctionObj *toRun = unwrapFunctionObj(*startOfFunctionCall);
+    ClosureObj *toRun = unwrapClosureObj(*startOfFunctionCall);
 
     CallFrame *nextFrame = getNextFrame(vm);
     nextFrame->currentStackIndex = argumentCount;
-    nextFrame->function = toRun;
+    nextFrame->closure = toRun;
     nextFrame->sp = startOfFunctionCall + 1;
-    nextFrame->ip = toRun->bytecode->code;
+    nextFrame->ip = toRun->function->bytecode->code;
 
     if (vm->debugMode)
     {
-        disassembleChunk(toRun->bytecode, toRun->name->chars, stdSysOut);
+        disassembleChunk(toRun->function->bytecode, toRun->function->name->chars, stdSysOut);
     }
 
     vm->fp++;
@@ -361,7 +367,7 @@ static void interpretCall(VirtualMachine *vm)
 
 static bool hasReturnValue(CallFrame *frame)
 {
-    int numFunctionArgs = frame->function->arity;
+    int numFunctionArgs = frame->closure->function->arity;
     return frame->currentStackIndex == numFunctionArgs + 1;
 }
 
@@ -378,12 +384,12 @@ static void interpretReturn(VirtualMachine *vm)
     vm->fp--;
     CallFrame *prevFrame = getCurrentFrame(vm);
 
-    int offset = currentFrame->function->arity + 1;
+    int offset = currentFrame->closure->function->arity + 1;
 
     prevFrame->currentStackIndex = prevFrame->currentStackIndex - offset;
     push(vm, returnValue);
 
-    currentFrame->function = NULL;
+    currentFrame->closure = NULL;
     currentFrame->currentStackIndex = 0;
     currentFrame->ip = NULL;
     currentFrame->sp = NULL;
@@ -417,6 +423,22 @@ static void interpretLessThanOrEquals(VirtualMachine *vm)
     double leftNum = unwrapNumber(left);
 
     Value result = wrapBool(leftNum <= rightNum);
+    push(vm, result);
+
+    currentFrame->ip = currentFrame->ip + 1;
+}
+
+static void interpretClosure(VirtualMachine *vm)
+{
+    CallFrame *currentFrame = getCurrentFrame(vm);
+
+    Value function = pop(vm);
+    ClosureObj *closure = malloc(sizeof(ClosureObj));
+    initClosureObj(closure);
+
+    closure->function = unwrapFunctionObj(function);
+
+    Value result = wrapObject((Obj*) closure);
     push(vm, result);
 
     currentFrame->ip = currentFrame->ip + 1;
@@ -513,6 +535,9 @@ void interpret(VirtualMachine *vm)
         case OP_LESS_THAN_EQUALS:
             interpretLessThanOrEquals(vm);
             break;
+        case OP_CLOSURE:
+            interpretClosure(vm);
+            break;
         default:
             printf("Invalid op code.");
             break;
@@ -538,7 +563,6 @@ void push(VirtualMachine *vm, Value value)
     currentFrame->sp[currentFrame->currentStackIndex] = value;
 
     currentFrame->currentStackIndex++;
-    vm->currentStackIndex++;
 }
 
 Value pop(VirtualMachine *vm)
