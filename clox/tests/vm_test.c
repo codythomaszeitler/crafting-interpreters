@@ -384,6 +384,28 @@ void testItShouldBeAbleToReturnACallAFunction()
     TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
 }
 
+void testItShouldBeAbleToCloseAroundImmediatelyEnclosingFunction()
+{
+    // So there are two new opcodes that are going to be introduced here.
+    // OP_GET_UPVALUE
+    // OP_SET_UPVALUE
+    // OP_CLOSURE has already been 
+    // So once you are resolving the identifier expression, you must have to go up the compiler function stack
+    // until you find a variable matching a
+    // So remember, a is exactly equivalent to a slot 
+    // But we have no idea where to find a? 
+    // Wait wait wait... how do we know if the 
+    // There is a problem, getVariableBinding works through the current compiler. 
+
+    // Wherever getVariableBinding is used.. we really need to change that to be called with current compiler?
+    // variableDecl, and identifier is where this is used.
+    // We really need to change it from using a parser to using a current compiler? 
+    const char *sourceCode = "{ func foo() { var a = 1; func bar() {print a; } return bar; } var z = foo(); z();}";
+    runInterpreter(&testObject, sourceCode);
+    TEST_ASSERT_EQUAL(1, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("1.000000", test_messages[0]);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -425,5 +447,6 @@ int main(void)
     RUN_TEST(testItShouldDoSimpleRecursion);
     RUN_TEST(testItShouldDoFibNumbers);
     RUN_TEST(testItShouldBeAbleToReturnACallAFunction);
+    // RUN_TEST(testItShouldBeAbleToCloseAroundImmediatelyEnclosingFunction);
     return UNITY_END();
 }

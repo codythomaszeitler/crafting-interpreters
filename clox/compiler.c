@@ -535,16 +535,18 @@ static void variableDecl(Parser *parser)
     popToken(parser->tokens);
     Token identifier = popToken(parser->tokens);
 
+    FunctionCompiler *currentCompiler = getCurrentCompiler(parser);
+
     if (isInGlobalScope(parser))
     {
-        writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_GLOBAL_DECL);
+        writeChunk(currentCompiler->compiling->bytecode, OP_VAR_GLOBAL_DECL);
         Value asString = wrapString(identifier.lexeme);
-        int constantLocation = addConstant(getCurrentCompilerBytecode(parser), asString);
-        writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
+        int constantLocation = addConstant(currentCompiler->compiling->bytecode, asString);
+        writeChunk(currentCompiler->compiling->bytecode, constantLocation);
     }
     else
     {
-        writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_DECL);
+        writeChunk(currentCompiler->compiling->bytecode, OP_VAR_DECL);
         defineVariableBinding(parser, identifier);
     }
 
@@ -555,16 +557,16 @@ static void variableDecl(Parser *parser)
         expression(parser);
         if (isGlobalBinding(parser, identifier))
         {
-            writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_GLOBAL_ASSIGN);
+            writeChunk(currentCompiler->compiling->bytecode, OP_VAR_GLOBAL_ASSIGN);
             Value asString = wrapString(identifier.lexeme);
-            int constantLocation = addConstant(getCurrentCompilerBytecode(parser), asString);
-            writeChunk(getCurrentCompilerBytecode(parser), constantLocation);
+            int constantLocation = addConstant(currentCompiler->compiling->bytecode, asString);
+            writeChunk(currentCompiler->compiling->bytecode, constantLocation);
         }
         else
         {
-            writeChunk(getCurrentCompilerBytecode(parser), OP_VAR_ASSIGN);
+            writeChunk(currentCompiler->compiling->bytecode, OP_VAR_ASSIGN);
             uint8_t offset = getVariableBinding(parser, identifier);
-            writeChunk(getCurrentCompilerBytecode(parser), offset);
+            writeChunk(currentCompiler->compiling->bytecode, offset);
         }
         popToken(parser->tokens);
     }
