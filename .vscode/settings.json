@@ -20,6 +20,8 @@
     },
     "C_Cpp.errorSquiggles": "Disabled",
     "cSpell.words": [
-        "CLOXSTRING"
+        "CLOXSTRING",
+        "Upvalue",
+        "upvalues"
     ]
 }

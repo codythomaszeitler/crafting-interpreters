@@ -11,7 +11,10 @@
 
 typedef struct VariableBindingStackLocation
 {
+    // So right here is an important thing that we need to track. if this token is being used by a closure?
+    // If it is... then when it gets popped... we need to
     Token token;
+    bool isClosedOn;
 } VariableBindingStackLocation;
 
 typedef struct FunctionCompiler
@@ -39,10 +42,18 @@ typedef struct ParseRule
     Precedence Precedence;
 } ParseRule;
 
+#define _BINDING_NOT_FOUND_ -1
 static FunctionCompiler *getCurrentCompiler(Parser *parser)
 {
     FunctionCompiler *current = &parser->compilers[parser->depth];
     return current;
+}
+
+static FunctionCompiler *getPreviousCompiler(Parser *parser)
+{
+    int prevCompIndex = parser->depth - 1;
+    FunctionCompiler *prev = &parser->compilers[prevCompIndex];
+    return prev;
 }
 
 static Chunk *getCurrentCompilerBytecode(Parser *parser)
@@ -85,8 +96,8 @@ static void parseExpression(Precedence, Parser *);
 static bool isAtEndOfStatement(Parser *);
 static bool isAtEndOfConditional(Parser *parser);
 static bool isGlobalBinding(Parser *, Token);
-static uint8_t getVariableBinding(Parser *, Token);
-static int getVariableBindingAsInt(Parser *parser, Token token);
+static uint8_t getVariableBinding(FunctionCompiler *, Token);
+static int getVariableBindingAsInt(FunctionCompiler *, Token token);
 static void statement(Parser *);
 
 ParseRule rules[] = {
@@ -140,41 +151,6 @@ static void literal(Parser *parser)
         writeString(getCurrentCompilerBytecode(parser), (const char *)shouldBeTrue.lexeme);
     }
 }
-
-// Checking if something is a function might be the wrong bet?
-// So in the foo case that I am currently looking at,
-// we could go up the function tree and find a function at RUNTIME?
-// What would that mean I would have to do?
-// Fuck that has to be sooo slow though?
-// So the problem is is that my function is stored in the following manner:
-
-// Value of 2 as number, is an index into the constant array of the current function.
-// If you were to return this value of 2 to someone else, it would not make any sense.
-// So what do we need to do now?
-
-// So when you run into an identifier DURING RUNTIME maybe you should check if the given
-// thing is a function or not, then run accordingly.
-
-// OR better yet, when someone is to receive a value it is up to them to call it properly.
-// If it is not callable, you are out of luck.
-
-// How here's the thing...
-// Is there an  efficient way of figuring out where a  fuction lives without having to go through maps?
-// Its odd that I use a constant... it really should be through a identifier right?
-// It could be w/e is on the stack at the moment?
-// You are just going to call w/e is on the bottom of the call stack?
-//
-// When you define a function, it can do the following things:
-// 1) The block is the enclosing scope of where a function is defined.
-// A function is scoped within the block in which its defined?
-// If you are trying to call something, what happens?
-// The value must be of a function obj.
-// Thus, the value must be OBJECT value whose pointer is going to FunctionObj.
-// How does this work on the identifier.
-// So when are you compiling something...
-// Wait if we keep the function within the constant.
-// Have a map from name to constant value.
-// So if you are trying to figure
 
 static bool isFunction(Parser *parser, const char *functionName)
 {
@@ -290,7 +266,7 @@ static void identifier(Parser *parser)
     {
         if (isFunction(parser, shouldBeId.lexeme))
         {
-            functionIdExpr(parser, shouldBeId); 
+            functionIdExpr(parser, shouldBeId);
         }
         else if (isGlobalBinding(parser, shouldBeId))
         {
@@ -317,22 +293,43 @@ static void identifier(Parser *parser)
         {
             FunctionCompiler *currentCompiler = getCurrentCompiler(parser);
             Token maybeEquals = peekAtToken(parser->tokens);
-            if (maybeEquals.type == TOKEN_EQUAL)
+            int offset = getVariableBindingAsInt(currentCompiler, shouldBeId);
+
+            if (offset != _BINDING_NOT_FOUND_)
             {
+                if (maybeEquals.type == TOKEN_EQUAL)
+                {
+                    popToken(parser->tokens);
+                    expression(parser);
 
-                popToken(parser->tokens);
-                expression(parser);
+                    writeChunk(currentCompiler->compiling->bytecode, OP_VAR_ASSIGN);
+                    writeChunk(currentCompiler->compiling->bytecode, offset);
 
-                writeChunk(currentCompiler->compiling->bytecode, OP_VAR_ASSIGN);
-                uint8_t offset = getVariableBinding(parser, shouldBeId);
-                writeChunk(currentCompiler->compiling->bytecode, offset);
+                    writeChunk(currentCompiler->compiling->bytecode, OP_VAR_EXPRESSION);
+                    writeChunk(currentCompiler->compiling->bytecode, offset);
+                }
+                else
+                {
+                    writeChunk(currentCompiler->compiling->bytecode, OP_VAR_EXPRESSION);
+                    writeChunk(currentCompiler->compiling->bytecode, offset);
+                }
             }
             else
             {
-                uint8_t stackLocation = getVariableBinding(parser, shouldBeId);
+                FunctionCompiler *previous = getPreviousCompiler(parser);
+                int binding = getVariableBinding(previous, shouldBeId);
+                previous->stack[binding].isClosedOn = true;
 
-                writeChunk(currentCompiler->compiling->bytecode, OP_VAR_EXPRESSION);
-                writeChunk(currentCompiler->compiling->bytecode, stackLocation);
+                bool isLocal = true;
+
+                Upvalue upvalue;
+                upvalue.index = binding;
+                upvalue.isLocal = isLocal;
+
+                addUpvalue(currentCompiler->compiling, upvalue);
+                writeChunk(currentCompiler->compiling->bytecode, OP_GET_UPVALUE);
+                writeChunk(currentCompiler->compiling->bytecode, 1);
+                writeChunk(currentCompiler->compiling->bytecode, binding);
             }
         }
     }
@@ -430,6 +427,7 @@ void compile(FunctionObj *functionObj, TokenArrayIterator *tokens)
     undoCompilerFunction(&parser);
 
     writeChunk(functionObj->bytecode, OP_RETURN);
+    writeChunk(functionObj->bytecode, 0);
 
     // freeParser(&parser);
 }
@@ -492,27 +490,55 @@ static void defineVariableBinding(Parser *parser, Token token)
         FunctionCompiler *compiler = getCurrentCompiler(parser);
         VariableBindingStackLocation *slot = &compiler->stack[compiler->stackDepth];
         slot->token = token;
+        slot->isClosedOn = false;
 
         compiler->stackDepth++;
     }
 }
 
-#define _BINDING_NOT_FOUND_ -1
+typedef enum
+{
+    GLOBAL,
+    CLOSURE,
+    LOCAL
+} VariableScope;
+
+static VariableScope getScopeOf(Parser *parser, Token identifier)
+{
+    for (int i = parser->depth; i >= 0; i++)
+    {
+        FunctionCompiler *compiler = &parser->compilers[i];
+
+        uint8_t binding = getVariableBinding(compiler, identifier);
+        if (binding != _BINDING_NOT_FOUND_)
+        {
+            if (i == parser->depth)
+            {
+                return LOCAL;
+            }
+            else
+            {
+                return CLOSURE;
+            }
+        }
+    }
+    return GLOBAL;
+}
+
 static bool isGlobalBinding(Parser *parser, Token token)
 {
-    int bindingLocation = getVariableBindingAsInt(parser, token);
-    return bindingLocation == _BINDING_NOT_FOUND_;
+    VariableScope maybeGlobal = getScopeOf(parser, token);
+    return maybeGlobal == GLOBAL;
 }
 
-static uint8_t getVariableBinding(Parser *parser, Token token)
+static uint8_t getVariableBinding(FunctionCompiler *compiler, Token token)
 {
-    return getVariableBindingAsInt(parser, token);
+    return getVariableBindingAsInt(compiler, token);
 }
 
-static int getVariableBindingAsInt(Parser *parser, Token token)
+static int getVariableBindingAsInt(FunctionCompiler *compiler, Token token)
 {
     int bindingLocation = _BINDING_NOT_FOUND_;
-    FunctionCompiler *compiler = getCurrentCompiler(parser);
     for (int i = compiler->stackDepth - 1; i >= 0; i--)
     {
         VariableBindingStackLocation *slot = &compiler->stack[i];
@@ -565,7 +591,7 @@ static void variableDecl(Parser *parser)
         else
         {
             writeChunk(currentCompiler->compiling->bytecode, OP_VAR_ASSIGN);
-            uint8_t offset = getVariableBinding(parser, identifier);
+            uint8_t offset = getVariableBinding(currentCompiler, identifier);
             writeChunk(currentCompiler->compiling->bytecode, offset);
         }
         popToken(parser->tokens);
@@ -594,9 +620,18 @@ static void blockEnd(Parser *parser, int stackDepthStart)
 
 static void releaseLocals(Parser *parser, int numLocals)
 {
-    for (int i = 0; i < numLocals; i++)
+    FunctionCompiler *compiler = getCurrentCompiler(parser);
+    for (int i = numLocals - 1; i >= 0; i--)
     {
-        writeChunk(getCurrentCompilerBytecode(parser), OP_POP);
+        VariableBindingStackLocation *location = &compiler->stack[i];
+        if (location->isClosedOn)
+        {
+            writeChunk(compiler->compiling->bytecode, OP_CLOSE_UPVALUE);
+        }
+        else
+        {
+            writeChunk(compiler->compiling->bytecode, OP_POP);
+        }
     }
 }
 
@@ -810,14 +845,23 @@ static void funcDecl(Parser *parser)
 
     blockStatement(parser);
     writeChunk(getCurrentCompilerBytecode(parser), OP_RETURN);
+    writeChunk(getCurrentCompilerBytecode(parser), 0);
     undoCompilerFunction(parser);
 }
 
 static void returnStmt(Parser *parser)
 {
+    FunctionCompiler *compiler = getCurrentCompiler(parser);
+
     popToken(parser->tokens);
+
     expression(parser);
-    writeChunk(getCurrentCompilerBytecode(parser), OP_RETURN);
+
+    writeChunk(compiler->compiling->bytecode, OP_RETURN);
+    writeChunk(compiler->compiling->bytecode, compiler->stackDepth - compiler->compiling->arity);
+
+    releaseLocals(parser, compiler->stackDepth - compiler->compiling->arity);
+
     popToken(parser->tokens);
 }
 
@@ -835,8 +879,7 @@ static void statement(Parser *parser)
     }
     else if (peeked.type == TOKEN_IDENTIFIER)
     {
-        expression(parser);
-        popToken(parser->tokens);
+        expressionStatement(parser); 
     }
     else if (peeked.type == TOKEN_LEFT_BRACE)
     {

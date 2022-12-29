@@ -42,6 +42,7 @@ void initVirtualMachine(VirtualMachine *vm)
 {
     vm->onStdOut = stdOutPrinter;
     vm->fp = -1;
+    vm->upvalueHead = NULL;
 
     initHashMap(&vm->global);
 
@@ -274,6 +275,7 @@ static void interpretGlobalExpression(VirtualMachine *vm)
 
 static void interpretPop(VirtualMachine *vm)
 {
+    // This guy is going to stay the same.
     pop(vm);
     vm->frames[vm->fp].ip = vm->frames[vm->fp].ip + 1;
 }
@@ -322,7 +324,6 @@ CallFrame *prepareForCall(VirtualMachine *vm, FunctionObj *functionObj)
     vm->fp++;
     CallFrame *newFrame = getCurrentFrame(vm);
 
-    // So at this moment, we need to wrap this function obj into a closure. 
     ClosureObj *closure = malloc(sizeof(ClosureObj));
     initClosureObj(closure);
     closure->function = functionObj;
@@ -365,10 +366,33 @@ static void interpretCall(VirtualMachine *vm)
     vm->fp++;
 }
 
-static bool hasReturnValue(CallFrame *frame)
+static bool hasReturnValue(CallFrame *frame, uint8_t numLocalArgs)
 {
     int numFunctionArgs = frame->closure->function->arity;
-    return frame->currentStackIndex == numFunctionArgs + 1;
+    return frame->currentStackIndex == numFunctionArgs + numLocalArgs + 1;
+}
+
+static void interpretCloseUpvalue(VirtualMachine *vm)
+{
+    CallFrame *currentFrame = getCurrentFrame(vm);
+
+    Value *popped = &currentFrame->sp[currentFrame->currentStackIndex - 1];
+    currentFrame->currentStackIndex--;
+
+    UpvalueObj *iterator = vm->upvalueHead;
+    while (iterator != NULL) 
+    {
+        if (popped == iterator->location)
+        {
+            iterator->closed = *popped; 
+            iterator->location = &iterator->closed;
+            break;
+        }
+
+        iterator = iterator->next;
+    }
+
+    currentFrame->ip = currentFrame->ip + 1;
 }
 
 static void interpretReturn(VirtualMachine *vm)
@@ -376,9 +400,27 @@ static void interpretReturn(VirtualMachine *vm)
     CallFrame *currentFrame = getCurrentFrame(vm);
     Value returnValue = nil();
 
-    if (hasReturnValue(currentFrame))
+    int numLocalArgs = *(currentFrame->ip + 1);
+    if (hasReturnValue(currentFrame, numLocalArgs))
     {
         returnValue = pop(vm);
+    }
+
+    for (int i = 2; i < numLocalArgs + 2; i++)
+    {
+        OpCode popType = *(currentFrame->ip + i);
+        if (popType == OP_POP)
+        {
+            interpretPop(vm);
+        }
+        else if (popType == OP_CLOSE_UPVALUE)
+        {
+            interpretCloseUpvalue(vm);
+        } 
+        else 
+        {
+            printf("Wrong thing was in after return function");
+        }
     }
 
     vm->fp--;
@@ -428,21 +470,54 @@ static void interpretLessThanOrEquals(VirtualMachine *vm)
     currentFrame->ip = currentFrame->ip + 1;
 }
 
+static UpvalueObj *resolveUpvalue(VirtualMachine *vm, Upvalue staticUpvalue)
+{
+    CallFrame *currentFrame = getCurrentFrame(vm);
+
+    UpvalueObj *upvalue = malloc(sizeof(UpvalueObj));
+    upvalue->location = &currentFrame->sp[staticUpvalue.index];
+
+    vm->upvalueHead = upvalue;
+    return vm->upvalueHead;
+}
+
 static void interpretClosure(VirtualMachine *vm)
 {
     CallFrame *currentFrame = getCurrentFrame(vm);
 
     Value function = pop(vm);
     ClosureObj *closure = malloc(sizeof(ClosureObj));
+
     initClosureObj(closure);
-
     closure->function = unwrapFunctionObj(function);
+    closure->upvalues = malloc(sizeof(Upvalue *) * closure->function->numUpvalues);
 
-    Value result = wrapObject((Obj*) closure);
+    for (int i = 0; i < closure->function->numUpvalues; i++)
+    {
+        Upvalue staticUpvalue = closure->function->upvalues[i];
+        closure->upvalues[staticUpvalue.index] = resolveUpvalue(vm, staticUpvalue);
+    }
+
+    Value result = wrapObject((Obj *)closure);
     push(vm, result);
 
     currentFrame->ip = currentFrame->ip + 1;
 }
+
+static void interpretGetUpvalue(VirtualMachine *vm)
+{
+    CallFrame *currentFrame = getCurrentFrame(vm);
+
+    // bool isLocal = *(currentFrame->ip + 1);
+    uint8_t index = *(currentFrame->ip + 2);
+    UpvalueObj *upvalue = currentFrame->closure->upvalues[index];
+
+    push(vm, (*upvalue->location));
+
+    currentFrame->ip = currentFrame->ip + 3;
+}
+
+
 
 static bool isAtEndOfBytecode(VirtualMachine *vm)
 {
@@ -537,6 +612,12 @@ void interpret(VirtualMachine *vm)
             break;
         case OP_CLOSURE:
             interpretClosure(vm);
+            break;
+        case OP_GET_UPVALUE:
+            interpretGetUpvalue(vm);
+            break;
+        case OP_CLOSE_UPVALUE:
+            interpretCloseUpvalue(vm);
             break;
         default:
             printf("Invalid op code.");

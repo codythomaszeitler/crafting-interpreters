@@ -42,22 +42,22 @@ void tearDown()
 
 void testItShouldCompileSingleNumberExpression()
 {
-    const char *sourceCode = "5";
+    const char *sourceCode = "5;";
 
     disassembleTest(sourceCode);
 
-    TEST_ASSERT_EQUAL(3, test_messages_size);
+    TEST_ASSERT_EQUAL(4, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 5.000000\n", test_messages[1]);
 }
 
 void testItShouldParseAddition()
 {
-    const char *sourceCode = "5 + 9";
+    const char *sourceCode = "5 + 9;";
 
     disassembleTest(sourceCode);
 
-    TEST_ASSERT_EQUAL(5, test_messages_size);
+    TEST_ASSERT_EQUAL(6, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 5.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 9.000000\n", test_messages[2]);
@@ -66,11 +66,11 @@ void testItShouldParseAddition()
 
 void testItShouldParseMultiplication()
 {
-    const char *sourceCode = "5 * 9";
+    const char *sourceCode = "5 * 9;";
 
     disassembleTest(sourceCode);
 
-    TEST_ASSERT_EQUAL(5, test_messages_size);
+    TEST_ASSERT_EQUAL(6, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 5.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 9.000000\n", test_messages[2]);
@@ -79,12 +79,12 @@ void testItShouldParseMultiplication()
 
 void testItShouldParseAdditionAndMultiplication()
 {
-    const char *sourceCode = "3 + 5 * 9";
+    const char *sourceCode = "3 + 5 * 9;";
     // 3 + ((5 * 9) * 10)
 
     disassembleTest(sourceCode);
 
-    TEST_ASSERT_EQUAL(7, test_messages_size);
+    TEST_ASSERT_EQUAL(8, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 5.000000\n", test_messages[2]);
@@ -95,11 +95,11 @@ void testItShouldParseAdditionAndMultiplication()
 
 void testItShouldParseMultiplicationExpressions()
 {
-    const char *sourceCode = "3 + 5 * 9 * 8";
+    const char *sourceCode = "3 + 5 * 9 * 8;";
 
     disassembleTest(sourceCode);
 
-    TEST_ASSERT_EQUAL(9, test_messages_size);
+    TEST_ASSERT_EQUAL(10, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 5.000000\n", test_messages[2]);
@@ -112,11 +112,11 @@ void testItShouldParseMultiplicationExpressions()
 
 void testItShouldParseNegationOfNumber()
 {
-    const char *sourceCode = "-3";
+    const char *sourceCode = "-3;";
 
     disassembleTest(sourceCode);
 
-    TEST_ASSERT_EQUAL(4, test_messages_size);
+    TEST_ASSERT_EQUAL(5, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_NEGATE\n", test_messages[2]);
@@ -124,11 +124,11 @@ void testItShouldParseNegationOfNumber()
 
 void testItShouldBeAbleParseNegationOnBothSidesOfMultiplication()
 {
-    const char *sourceCode = "-3 * -5";
+    const char *sourceCode = "-3 * -5;";
 
     disassembleTest(sourceCode);
 
-    TEST_ASSERT_EQUAL(7, test_messages_size);
+    TEST_ASSERT_EQUAL(8, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_NEGATE\n", test_messages[2]);
@@ -139,11 +139,11 @@ void testItShouldBeAbleParseNegationOnBothSidesOfMultiplication()
 
 void testItShouldParseBasicSubtraction()
 {
-    const char *sourceCode = "3 - 5";
+    const char *sourceCode = "3 - 5;";
 
     disassembleTest(sourceCode);
 
-    TEST_ASSERT_EQUAL(5, test_messages_size);
+    TEST_ASSERT_EQUAL(6, test_messages_size);
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 5.000000\n", test_messages[2]);
@@ -152,11 +152,23 @@ void testItShouldParseBasicSubtraction()
 
 void testItShouldParseDivision()
 {
-    const char *sourceCode = "3 / 5";
+    const char *sourceCode = "3 / 5;";
 
     disassembleTest(sourceCode);
 
-    TEST_ASSERT_EQUAL(5, test_messages_size);
+    TEST_ASSERT_EQUAL(6, test_messages_size);
+    TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
+    TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
+    TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 5.000000\n", test_messages[2]);
+    TEST_ASSERT_EQUAL_STRING("0004 OP_DIV\n", test_messages[3]);
+}
+
+void testItShouldBeAbleToParseAClosure() 
+{
+    const char *sourceCode = "{ func foo() {var a = 1; func bar() { print a; }} var z = foo();}";
+
+    disassembleTest(sourceCode);
+
     TEST_ASSERT_EQUAL_STRING("=== test chunk ===\n", test_messages[0]);
     TEST_ASSERT_EQUAL_STRING("0000 OP_CONSTANT 0 3.000000\n", test_messages[1]);
     TEST_ASSERT_EQUAL_STRING("0002 OP_CONSTANT 1 5.000000\n", test_messages[2]);

@@ -29,6 +29,9 @@ typedef struct VirtualMachine
     CallFrame frames[_NUM_CALL_FRAMES_];
     int fp;
     bool debugMode;
+
+    UpvalueObj *upvalueHead;
+
 } VirtualMachine;
 
 void initVirtualMachine(VirtualMachine *);
